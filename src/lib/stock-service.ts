@@ -167,6 +167,34 @@ export class StockService {
   }
 
   /**
+   * Search stocks with company-name prioritization.
+   */
+  static async searchStocksByName(query: string): Promise<StockData[]> {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    const stocks = await this.searchStocks(query);
+
+    return [...stocks]
+      .sort((a, b) => {
+        const aNameMatch = a.name.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+        const bNameMatch = b.name.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+
+        if (aNameMatch !== bNameMatch) {
+          return bNameMatch - aNameMatch;
+        }
+
+        const aSymbolMatch = a.symbol.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+        const bSymbolMatch = b.symbol.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+
+        return bSymbolMatch - aSymbolMatch;
+      })
+      .slice(0, 15);
+  }
+
+  /**
    * Generate symbol variations for better search coverage
    */
   private static generateSymbolVariations(symbol: string): string[] {

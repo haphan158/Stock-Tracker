@@ -218,7 +218,7 @@ export default function Dashboard() {
                         <div className="text-right">
                           <div className="font-medium">{formatCurrency(stock.currentPrice)}</div>
                           <div className="text-sm text-green-600">
-                            +{formatPercentage(stock.changePercent)}
+                            {formatPercentage(stock.changePercent)}
                           </div>
                         </div>
                       </div>

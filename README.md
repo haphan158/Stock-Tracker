@@ -160,16 +160,15 @@ stock-tracker/
 npm run dev          # Start development server
 npm run build        # Build for production
 npm run start        # Start production server
-npm run lint         # Run ESLint
 
 # Database
-npm run db:generate  # Generate Prisma client
-npm run db:push      # Push schema to database
-npm run db:studio    # Open Prisma Studio
+npx prisma generate  # Generate Prisma client
+npx prisma db push   # Push schema to database
+npx prisma studio    # Open Prisma Studio
 
 # Docker
-npm run docker:build # Build Docker image
-npm run docker:run   # Run Docker container
+docker build -t stock-tracker .                 # Build Docker image
+docker run -p 3000:3000 --env-file .env stock-tracker  # Run Docker container
 ```
 
 ## 🌐 API Endpoints
