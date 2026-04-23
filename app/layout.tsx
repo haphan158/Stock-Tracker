@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 
 import './globals.css';
+import { CommandPalette } from '@/src/components/command-palette';
 import { AuthProvider } from '@/src/components/providers/auth-provider';
 import { QueryProvider } from '@/src/components/providers/query-provider';
 import { ThemeProvider } from '@/src/components/providers/theme-provider';
@@ -28,6 +29,7 @@ export default function RootLayout({
           <QueryProvider>
             <AuthProvider>
               {children}
+              <CommandPalette />
               <ThemedToaster />
             </AuthProvider>
           </QueryProvider>

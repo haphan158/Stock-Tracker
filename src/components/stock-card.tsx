@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 import { TrendingUp, TrendingDown, Minus, Star } from 'lucide-react';
 
 import { Button } from '@/src/components/ui/button';
@@ -34,8 +37,10 @@ export function StockCard({
   onRemoveFromWatchlist,
 }: StockCardProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const handleWatchlistToggle = async () => {
+  const handleWatchlistToggle = async (event?: { stopPropagation: () => void }) => {
+    event?.stopPropagation();
     if (isLoading) return;
 
     setIsLoading(true);
@@ -50,6 +55,15 @@ export function StockCard({
     }
   };
 
+  const href = `/stocks/${encodeURIComponent(symbol)}`;
+
+  const goToDetail = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      router.push(href);
+    }
+  };
+
   const getChangeIcon = () => {
     if (change > 0)
       return <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
@@ -58,17 +72,31 @@ export function StockCard({
   };
 
   return (
-    <Card className="hover:border-primary/40 transition-all duration-200 hover:shadow-lg">
+    <Card
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(href)}
+      onKeyDown={goToDetail}
+      aria-label={`${symbol} — ${name}. Open detail page.`}
+      className="hover:border-primary/40 focus-visible:ring-ring cursor-pointer transition-all duration-200 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-foreground text-lg font-semibold">{symbol}</CardTitle>
+            <CardTitle className="text-foreground text-lg font-semibold">
+              <Link href={href} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+                {symbol}
+              </Link>
+            </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">{name}</p>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleWatchlistToggle}
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleWatchlistToggle(event);
+            }}
             disabled={isLoading}
             className="h-auto p-2"
             aria-label={

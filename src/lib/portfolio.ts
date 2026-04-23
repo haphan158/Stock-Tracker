@@ -20,6 +20,8 @@ export interface EnrichedHolding {
   changePercent: number;
   createdAt: Date;
   updatedAt: Date;
+  /** Currency the cost basis is denominated in (USD for legacy rows). */
+  currency: string;
 }
 
 export function enrichHolding(holding: Holding, quote: StockData | undefined): EnrichedHolding {
@@ -48,6 +50,7 @@ export function enrichHolding(holding: Holding, quote: StockData | undefined): E
     changePercent: quoteAvailable ? quote!.changePercent : 0,
     createdAt: holding.createdAt,
     updatedAt: holding.updatedAt,
+    currency: (holding as unknown as { currency?: string }).currency ?? 'USD',
   };
 }
 

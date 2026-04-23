@@ -1,20 +1,41 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
-import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, X, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+
+import {
+  AlertTriangle,
+  Briefcase,
+  Clock,
+  Download,
+  DollarSign,
+  Plus,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Upload,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Navigation } from '@/src/components/navigation';
+import { PortfolioSwitcher } from '@/src/components/portfolio-switcher';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { EmptyState } from '@/src/components/ui/empty-state';
 import { Input } from '@/src/components/ui/input';
+import { HoldingListSkeleton } from '@/src/components/ui/skeletons';
 import { useDeleteHolding, usePortfolio, useUpsertHolding } from '@/src/hooks/usePortfolio';
 import { formatCurrency, formatPercentage } from '@/src/lib/utils';
 
 export default function PortfolioPage() {
-  const { data, isLoading, error } = usePortfolio();
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | undefined>(undefined);
+  const { data, isLoading, error } = usePortfolio(true, selectedPortfolioId);
   const upsertHolding = useUpsertHolding();
   const deleteHolding = useDeleteHolding();
+
+  const activePortfolioId = data?.portfolio?.id ?? selectedPortfolioId;
 
   const [showForm, setShowForm] = useState(false);
   const [symbol, setSymbol] = useState('');
@@ -24,6 +45,50 @@ export default function PortfolioPage() {
 
   const holdings = data?.holdings ?? [];
   const summary = data?.summary;
+  const displayCurrency = data?.displayCurrency ?? 'USD';
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleExport = (format: 'holdings' | 'transactions') => {
+    const params = new URLSearchParams({ format });
+    if (activePortfolioId) params.set('portfolioId', activePortfolioId);
+    window.open(`/api/portfolio/export?${params.toString()}`, '_blank');
+  };
+
+  const handleImport = async (file: File) => {
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const importUrl = activePortfolioId
+        ? `/api/portfolio/import?portfolioId=${encodeURIComponent(activePortfolioId)}`
+        : '/api/portfolio/import';
+      const res = await fetch(importUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/csv' },
+        body: text,
+      });
+      const result = (await res.json().catch(() => null)) as {
+        imported: number;
+        skipped: number;
+        errors: { row: number; message: string }[];
+      } | null;
+      if (!res.ok) {
+        toast.error(
+          `Import failed${result?.errors?.length ? `: ${result.errors[0]?.message ?? ''}` : ''}`,
+        );
+      } else if (result) {
+        toast.success(
+          `Imported ${result.imported} rows${result.skipped > 0 ? `, skipped ${result.skipped}` : ''}`,
+        );
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const resetForm = () => {
     setSymbol('');
@@ -54,7 +119,12 @@ export default function PortfolioPage() {
     }
 
     try {
-      await upsertHolding.mutateAsync({ symbol: sym, shares: sharesNum, averageCost: costNum });
+      await upsertHolding.mutateAsync({
+        symbol: sym,
+        shares: sharesNum,
+        averageCost: costNum,
+        ...(activePortfolioId ? { portfolioId: activePortfolioId } : {}),
+      });
       resetForm();
       setShowForm(false);
     } catch (err) {
@@ -72,17 +142,61 @@ export default function PortfolioPage() {
             <div>
               <h1 className="text-foreground mb-2 text-3xl font-bold">Portfolio</h1>
               <p className="text-muted-foreground">Track your investments and performance.</p>
+              <div className="mt-3">
+                <PortfolioSwitcher
+                  selectedId={selectedPortfolioId ?? data?.portfolio?.id}
+                  onSelect={setSelectedPortfolioId}
+                />
+              </div>
             </div>
-            <Button
-              onClick={() => {
-                setShowForm((prev) => !prev);
-                setFormError(null);
-              }}
-              className="flex items-center space-x-2"
-            >
-              {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              <span>{showForm ? 'Cancel' : 'Add Stock'}</span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport('holdings')}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" /> Export holdings
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport('transactions')}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" /> Export transactions
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" /> {isImporting ? 'Importing…' : 'Import CSV'}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleImport(f);
+                }}
+                className="hidden"
+                aria-hidden
+              />
+              <Button
+                onClick={() => {
+                  setShowForm((prev) => !prev);
+                  setFormError(null);
+                }}
+                className="flex items-center space-x-2"
+              >
+                {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                <span>{showForm ? 'Cancel' : 'Add Stock'}</span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -118,7 +232,13 @@ export default function PortfolioPage() {
                   {upsertHolding.isPending ? 'Saving…' : 'Save'}
                 </Button>
                 {formError ? (
-                  <p className="text-destructive text-sm md:col-span-4">{formError}</p>
+                  <p
+                    role="alert"
+                    aria-live="polite"
+                    className="text-destructive text-sm md:col-span-4"
+                  >
+                    {formError}
+                  </p>
                 ) : null}
                 <p className="text-muted-foreground text-xs md:col-span-4">
                   Adding an existing symbol overwrites its shares and average cost.
@@ -136,9 +256,11 @@ export default function PortfolioPage() {
             </CardHeader>
             <CardContent>
               <div className="text-foreground text-2xl font-bold">
-                {formatCurrency(summary?.totalValue ?? 0)}
+                {formatCurrency(summary?.totalValue ?? 0, displayCurrency)}
               </div>
-              <p className="text-muted-foreground text-xs">Current portfolio value</p>
+              <p className="text-muted-foreground text-xs">
+                Current portfolio value ({displayCurrency})
+              </p>
             </CardContent>
           </Card>
 
@@ -149,7 +271,7 @@ export default function PortfolioPage() {
             </CardHeader>
             <CardContent>
               <div className="text-foreground text-2xl font-bold">
-                {formatCurrency(summary?.totalCost ?? 0)}
+                {formatCurrency(summary?.totalCost ?? 0, displayCurrency)}
               </div>
               <p className="text-muted-foreground text-xs">Total amount invested</p>
             </CardContent>
@@ -172,7 +294,7 @@ export default function PortfolioPage() {
                     : 'text-rose-600 dark:text-rose-400'
                 }`}
               >
-                {formatCurrency(summary?.totalGainLoss ?? 0)}
+                {formatCurrency(summary?.totalGainLoss ?? 0, displayCurrency)}
               </div>
               <p
                 className={`text-xs ${
@@ -200,7 +322,11 @@ export default function PortfolioPage() {
         </div>
 
         {summary && summary.staleCount > 0 ? (
-          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100"
+          >
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <div>
               <div className="font-medium">
@@ -223,18 +349,29 @@ export default function PortfolioPage() {
           </CardHeader>
           <CardContent>
             {error ? (
-              <p className="text-destructive">Failed to load holdings.</p>
-            ) : isLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="bg-muted h-16 animate-pulse rounded-lg" />
-                ))}
-              </div>
-            ) : holdings.length === 0 ? (
-              <p className="text-muted-foreground py-6 text-center">
-                No holdings yet — click{' '}
-                <span className="text-foreground font-medium">Add Stock</span> to get started.
+              <p className="text-destructive" role="alert">
+                Failed to load holdings.
               </p>
+            ) : isLoading ? (
+              <HoldingListSkeleton />
+            ) : holdings.length === 0 ? (
+              <EmptyState
+                icon={Briefcase}
+                tone="primary"
+                title="No holdings yet"
+                description="Add a position manually, import a CSV, or open a stock page and click ‘Add to portfolio’."
+                action={
+                  <Button
+                    onClick={() => {
+                      setShowForm(true);
+                      setFormError(null);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" /> Add your first stock
+                  </Button>
+                }
+              />
             ) : (
               <div className="space-y-4">
                 {holdings.map((holding) => (
@@ -272,10 +409,10 @@ export default function PortfolioPage() {
                       </div>
                       <div className="text-muted-foreground mt-2 text-sm">
                         {holding.shares.toLocaleString(undefined, { maximumFractionDigits: 6 })}{' '}
-                        shares @ {formatCurrency(holding.averageCost)} avg ·{' '}
+                        shares @ {formatCurrency(holding.averageCost, holding.currency)} avg ·{' '}
                         {holding.quoteAvailable ? (
                           <span className="text-foreground">
-                            now {formatCurrency(holding.currentPrice)}
+                            now {formatCurrency(holding.currentPrice, displayCurrency)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground italic">price unavailable</span>
@@ -286,7 +423,9 @@ export default function PortfolioPage() {
                     <div className="flex items-center justify-between gap-4 sm:justify-end">
                       <div className="text-right">
                         <div className="text-foreground font-semibold">
-                          {holding.quoteAvailable ? formatCurrency(holding.marketValue) : '—'}
+                          {holding.quoteAvailable
+                            ? formatCurrency(holding.marketValue, displayCurrency)
+                            : '—'}
                         </div>
                         <div
                           className={`text-sm ${
@@ -298,10 +437,19 @@ export default function PortfolioPage() {
                           }`}
                         >
                           {holding.quoteAvailable
-                            ? `${formatCurrency(holding.gainLoss)} (${formatPercentage(holding.gainLossPercent)})`
+                            ? `${formatCurrency(holding.gainLoss, displayCurrency)} (${formatPercentage(holding.gainLossPercent)})`
                             : '—'}
                         </div>
                       </div>
+
+                      <Link
+                        href={`/portfolio/${encodeURIComponent(holding.symbol)}/transactions`}
+                        aria-label={`View ${holding.symbol} transactions`}
+                      >
+                        <Button variant="ghost" size="sm" className="text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                      </Link>
 
                       <Button
                         variant="ghost"

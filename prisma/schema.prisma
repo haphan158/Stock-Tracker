@@ -38,17 +38,21 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?          @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
   watchlist     WatchlistItem[]
   holdings      Holding[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  portfolios    Portfolio[]
+  transactions  Transaction[]
+  alerts        Alert[]
+  preferences   UserPreferences?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
 model VerificationToken {
@@ -57,6 +61,31 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model UserPreferences {
+  userId          String   @id
+  displayName     String?
+  displayCurrency String   @default("USD")
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Portfolio {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings     Holding[]
+  transactions Transaction[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model WatchlistItem {
@@ -74,14 +103,69 @@ model WatchlistItem {
 model Holding {
   id          String   @id @default(cuid())
   userId      String
+  portfolioId String
   symbol      String
   shares      Decimal  @db.Decimal(18, 6)
   averageCost Decimal  @db.Decimal(18, 6)
+  currency    String   @default("USD")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, symbol])
+  @@index([userId])
+  @@index([portfolioId])
+}
+
+enum TransactionType {
+  BUY
+  SELL
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  userId      String
+  portfolioId String
+  symbol      String
+  type        TransactionType
+  shares      Decimal         @db.Decimal(18, 6)
+  price       Decimal         @db.Decimal(18, 6)
+  fee         Decimal?        @db.Decimal(18, 6)
+  currency    String          @default("USD")
+  executedAt  DateTime
+  notes       String?
+  createdAt   DateTime        @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([portfolioId, symbol])
+  @@index([symbol])
+}
+
+enum AlertDirection {
+  ABOVE
+  BELOW
+}
+
+model Alert {
+  id              String         @id @default(cuid())
+  userId          String
+  symbol          String
+  direction       AlertDirection
+  threshold       Decimal        @db.Decimal(18, 6)
+  active          Boolean        @default(true)
+  note            String?
+  lastTriggeredAt DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, symbol])
   @@index([userId])
+  @@index([symbol])
+  @@index([active])
 }

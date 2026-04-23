@@ -6,7 +6,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { TrendingUp, Briefcase, Eye, BarChart3, LogOut, Menu, X } from 'lucide-react';
+import {
+  BarChart3,
+  Bell,
+  Briefcase,
+  Eye,
+  LogOut,
+  Menu,
+  Settings,
+  TrendingUp,
+  X,
+} from 'lucide-react';
 import { useSession, signIn, signOut } from 'next-auth/react';
 
 import { cn } from '@/lib/utils';
@@ -18,6 +28,8 @@ const NAV_ITEMS = [
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { href: '/watchlist', label: 'Watchlist', icon: Eye },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/alerts', label: 'Alerts', icon: Bell },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
 export function Navigation() {

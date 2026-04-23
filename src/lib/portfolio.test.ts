@@ -177,6 +177,7 @@ describe('summarizePortfolio', () => {
       changePercent: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
+      currency: 'USD',
       ...overrides,
     };
   }
