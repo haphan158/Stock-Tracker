@@ -1,237 +1,218 @@
-# 📈 Stock Tracker
+# Stock Tracker
 
-A modern, real-time stock tracking web application built with Next.js 15, React 19, and TypeScript. Features user authentication, real-time stock data from Yahoo Finance, portfolio management, and interactive analytics.
+**Stock Tracker** is a full-stack web app for watching markets, managing portfolios, and tracking alerts. Users sign in with Google, persist data in PostgreSQL, and pull live and historical quotes (Yahoo Finance primary, with optional Finnhub / Twelve Data fallbacks).
 
-## ✨ Features
+**Live demo:** [https://stock-tracker-haphan.vercel.app/](https://stock-tracker-haphan.vercel.app/)
 
-- 🔐 **User Authentication** - Google OAuth integration with NextAuth.js
-- 📊 **Real-time Stock Data** - Live data from Yahoo Finance API
-- 💼 **Portfolio Management** - Track your investments and performance
-- 👀 **Watchlist** - Monitor your favorite stocks
-- 📈 **Analytics Dashboard** - Performance metrics and sector allocation
-- 🎨 **Modern UI** - Beautiful, responsive design with Tailwind CSS
-- 🚀 **Real-time Updates** - Live data refresh and caching
-- 📱 **Mobile Responsive** - Works perfectly on all devices
+---
 
-## 🛠️ Tech Stack
+## Architecture overview
 
-- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
-- **Styling**: Tailwind CSS 4, Radix UI components
-- **Authentication**: NextAuth.js v4 with Google OAuth
-- **Database**: PostgreSQL with Prisma ORM
-- **Data Fetching**: TanStack Query (React Query v5)
-- **Stock Data**: Yahoo Finance API
-- **Charts**: Recharts
-- **Deployment**: Docker, Docker Compose, AWS-ready
+High-level system: the browser talks to **Next.js** (App Router). Server routes use **Prisma** for PostgreSQL and call market data providers. **NextAuth** handles Google OAuth and session storage in the database.
 
-## 🚀 Quick Start
+```mermaid
+flowchart LR
+  subgraph Client
+    B[Browser / React UI]
+  end
+  subgraph VercelOrLocal["Next.js server"]
+    P[Pages & Server Components]
+    API[Route Handlers /api/*]
+    NA[NextAuth]
+  end
+  subgraph Data
+    PG[(PostgreSQL)]
+    YF[Yahoo Finance]
+    FH[Finnhub optional]
+    TD[Twelve Data optional]
+  end
+  B --> P
+  B --> API
+  B --> NA
+  P --> API
+  API --> PG
+  NA --> PG
+  API --> YF
+  API --> FH
+  API --> TD
+```
+
+Request flow for a typical authenticated API call (e.g. watchlist):
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant N as Next.js /api
+  participant A as NextAuth
+  participant DB as PostgreSQL
+  participant M as Market APIs
+
+  U->>N: HTTP request (session cookie)
+  N->>A: Validate session
+  A->>DB: Load session / user
+  DB-->>A: User context
+  A-->>N: Authorized
+  N->>DB: Read/write app data
+  N->>M: Fetch quotes if needed
+  M-->>N: Quotes / errors
+  N-->>U: JSON response
+```
+
+---
+
+## Tech stack and major dependencies
+
+| Area                   | Technology                                                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Framework              | [Next.js 15](https://nextjs.org/) (App Router), React 19, TypeScript                                             |
+| Auth                   | [NextAuth.js v4](https://next-auth.js.org/), `@next-auth/prisma-adapter`                                         |
+| Database               | [PostgreSQL](https://www.postgresql.org/) via [Prisma ORM](https://www.prisma.io/)                               |
+| Caching / server state | [TanStack Query](https://tanstack.com/query)                                                                     |
+| UI                     | [Tailwind CSS 4](https://tailwindcss.com/), [Radix UI](https://www.radix-ui.com/), [Lucide](https://lucide.dev/) |
+| Charts                 | [Recharts](https://recharts.org/)                                                                                |
+| Stock data             | [yahoo-finance2](https://github.com/gadicc/yahoo-finance2), optional Finnhub / Twelve Data                       |
+| Validation / env       | [Zod](https://zod.dev/)                                                                                          |
+| Logging                | [Pino](https://getpino.io/)                                                                                      |
+| Errors (optional)      | [@sentry/nextjs](https://docs.sentry.io/platforms/javascript/guides/nextjs/)                                     |
+| Quality                | ESLint, Prettier, Vitest, Husky                                                                                  |
+
+Runtime requirement: **Node.js >= 20.11.0 and < 25** (see `package.json` `engines`).
+
+---
+
+## Installation and setup (local)
+
+These steps were checked on a clean `npm install` and `npm run typecheck` in this repository. You need **PostgreSQL** running locally (or a cloud URL in `DATABASE_URL`) before migrations will succeed.
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL
-- Google Cloud Console account (for OAuth)
-- Docker & Docker Compose (optional)
+1. **Node.js** 20.11+ (LTS recommended).
+2. **PostgreSQL** 14+ with a database created (e.g. `stock_tracker`).
+3. A **Google Cloud** project with OAuth 2.0 **Web application** credentials (for sign-in).
 
-### 1. Clone the Repository
-
-```bash
-git clone <your-github-repo-url>
-cd stock-tracker
-```
-
-### 2. Install Dependencies
+### Steps
 
 ```bash
+git clone <repository-url>
+cd Stock-Tracker
 npm install
-```
-
-### 3. Environment Setup
-
-Copy the example environment file and fill in your credentials:
-
-```bash
 cp env.example .env
 ```
 
-**Required Environment Variables:**
+Edit `.env`:
 
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/stock_tracker"
+- Set `DATABASE_URL` to your Postgres connection string.
+- Set `DIRECT_URL` to the same value for local dev (or your direct connection if you split pooler/direct in production).
+- Set `NEXTAUTH_URL=http://localhost:3000`.
+- Set `NEXTAUTH_SECRET` to a random string **at least 32 characters** (e.g. `openssl rand -base64 32`).
+- Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from Google Cloud Console.
 
-# NextAuth.js
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-generated-secret-key"
+**Google OAuth (local):** add authorized JavaScript origin `http://localhost:3000` and redirect URI `http://localhost:3000/api/auth/callback/google`.
 
-# Google OAuth (Required for authentication)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# Optional: AWS (for production deployment)
-AWS_ACCESS_KEY_ID="your-aws-access-key"
-AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
-AWS_REGION="us-east-1"
-```
-
-### 4. Database Setup
+Apply database schema:
 
 ```bash
-# Generate Prisma client
-npx prisma generate
-
-# Push schema to database
-npx prisma db push
+npm run db:generate
+npm run db:migrate
 ```
 
-### 5. Run the Application
+Start the dev server:
 
 ```bash
-# Development
 npm run dev
+```
 
-# Production build
+Open [http://localhost:3000](http://localhost:3000).
+
+**Note:** On first `npm install`, Husky may try to configure git hooks. If that fails in a restricted environment, the app still runs; on a normal machine hooks install as usual.
+
+**Optional checks:**
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+```
+
+---
+
+## Usage examples
+
+### Run the app
+
+```bash
+npm run dev
+```
+
+Default dev server: **http://localhost:3000** (Turbopack).
+
+### Production-style run (after build)
+
+```bash
 npm run build
 npm start
 ```
 
-## 🔐 Google OAuth Setup
+### Example: use the UI
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable **Google+ API** and **Google OAuth2 API**
-4. Create OAuth 2.0 credentials:
-   - Application type: Web application
-   - Authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
-5. Copy Client ID and Client Secret to your `.env` file
+1. Click **Sign In** and complete Google OAuth.
+2. On the **Dashboard**, use the search box: type **`AAPL`** or **`Apple`** and open a symbol.
+3. Add symbols to the **Watchlist**; open **Portfolio** to create holdings or transactions.
+4. **Analytics** summarizes allocation; **Alerts** can watch price thresholds (cron route exists for scheduled checks if you configure it).
 
-## 🐳 Docker Deployment
+### Example: API without browser (session required for most routes)
 
-### Local Development with Docker
+Health check (no auth):
 
 ```bash
-# Start the entire stack (app + PostgreSQL)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+curl -s http://localhost:3000/api/health
 ```
 
-### Production Build
-
-```bash
-# Build the image
-docker build -t stock-tracker .
-
-# Run the container
-docker run -p 3000:3000 --env-file .env stock-tracker
-```
-
-## 📁 Project Structure
-
-```
-stock-tracker/
-├── app/                    # Next.js App Router pages
-│   ├── api/               # API routes
-│   ├── auth/              # Authentication pages
-│   ├── portfolio/         # Portfolio management
-│   ├── watchlist/         # Watchlist management
-│   └── analytics/         # Analytics dashboard
-├── src/                    # Source code
-│   ├── components/         # Reusable UI components
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # Utilities and services
-│   └── types/             # TypeScript type definitions
-├── prisma/                 # Database schema and migrations
-├── public/                 # Static assets
-└── docker-compose.yml      # Local development setup
-```
-
-## 🔧 Available Scripts
-
-```bash
-# Development
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-
-# Database
-npx prisma generate  # Generate Prisma client
-npx prisma db push   # Push schema to database
-npx prisma studio    # Open Prisma Studio
-
-# Docker
-docker build -t stock-tracker .                 # Build Docker image
-docker run -p 3000:3000 --env-file .env stock-tracker  # Run Docker container
-```
-
-## 🌐 API Endpoints
-
-- `GET /api/stocks` - Fetch multiple stock data
-- `GET /api/stocks/search` - Search stocks by symbol/name
-- `GET /api/stocks/market-summary` - Get market summary (gainers/losers)
-- `GET /api/auth/[...nextauth]` - NextAuth.js authentication
-
-## 📊 Stock Data Sources
-
-- **Primary**: Yahoo Finance API (via `yahoo-finance2`)
-- **Fallback**: Alpha Vantage API (optional)
-- **Real-time**: Live market data with automatic refresh
-- **Historical**: Price history and performance metrics
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. Connect your GitHub repository to Vercel
-2. Set environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### AWS
-
-1. Build Docker image: `docker build -t stock-tracker .`
-2. Push to ECR: `aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com`
-3. Deploy to ECS or EC2
-
-### Docker
-
-```bash
-# Production build
-docker build -t stock-tracker:latest .
-
-# Run with environment file
-docker run -d -p 3000:3000 --env-file .env stock-tracker:latest
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Issues**: Create a GitHub issue
-- **Documentation**: Check the project structure and setup guides
-- **Environment**: Ensure all required environment variables are set
-
-## 🔒 Security Notes
-
-- **Never commit** your `.env` file to version control
-- **Rotate API keys** regularly
-- **Use environment variables** for all sensitive configuration
-- **Enable 2FA** on your Google Cloud account
-- **Review OAuth scopes** and permissions regularly
+Authenticated endpoints expect a session cookie from the browser after login; use the UI or tooling that preserves cookies for manual API testing.
 
 ---
 
-**Happy Trading! 📈**
+## Repository folder structure
+
+```
+Stock-Tracker/
+├── app/                    # Next.js App Router: pages, layouts, global styles
+│   ├── api/                # REST-style route handlers (portfolio, stocks, auth, …)
+│   ├── auth/               # Sign-in UI
+│   ├── portfolio/          # Portfolio pages
+│   ├── stocks/             # Symbol detail routes
+│   ├── watchlist/, alerts/, analytics/, settings/
+│   └── …
+├── src/
+│   ├── components/         # React components (incl. ui/, providers/)
+│   ├── hooks/              # Custom hooks
+│   ├── lib/                # Prisma client, auth, env, providers (Yahoo, Finnhub, …)
+│   └── types/              # Shared TypeScript types
+├── prisma/
+│   ├── schema.prisma       # Data model
+│   └── migrations/         # SQL migrations
+├── public/                 # Static assets
+├── docker/                 # Docker-related files (if used)
+├── docker-compose.yml      # Optional local stack
+├── env.example             # Environment template
+├── vercel.json             # Vercel build command override
+├── next.config.ts
+├── instrumentation.ts    # Sentry / runtime hooks
+└── package.json
+```
+
+---
+
+## Deployment (Vercel + Supabase-style Postgres)
+
+- **Build:** `vercel-build` runs `prisma generate`, `prisma migrate deploy`, then `next build` (see `vercel.json` and `package.json`).
+- **Env:** Set `DATABASE_URL`, `DIRECT_URL` (can match pooler URL if you only use Supabase session pooler), `NEXTAUTH_URL` (your public origin), `NEXTAUTH_SECRET`, Google OAuth IDs.
+- **OAuth:** Authorized origins and redirect URIs must match the deployed host exactly (avoid `redirect_uri_mismatch`).
+
+---
+
+## Security notes
+
+- Do not commit `.env`.
+- Rotate any secret that was exposed (database password, `NEXTAUTH_SECRET`, OAuth client secret).
+- Keep Google OAuth redirect URIs strict and aligned with each environment (local, preview, production).
