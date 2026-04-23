@@ -1,12 +1,12 @@
 # Stock Tracker
 
-**Stock Tracker** is a full-stack web app for watching markets, managing portfolios, and tracking alerts. Users sign in with Google, persist data in PostgreSQL, and pull live and historical quotes (Yahoo Finance primary, with optional Finnhub / Twelve Data fallbacks).
+**Stock Tracker** is a full-stack web app for watching markets, managing portfolios, and tracking alerts. Users sign in with Google, persist data in PostgreSQL, and pull live and historical quotes (Yahoo Finance primary, with Finnhub / Twelve Data fallbacks).
 
 **Live demo:** [https://stock-tracker-haphan.vercel.app/](https://stock-tracker-haphan.vercel.app/)
 
 ---
 
-## Architecture overview
+## Architecture Overview
 
 High-level system: the browser talks to **Next.js** (App Router). Server routes use **Prisma** for PostgreSQL and call market data providers. **NextAuth** handles Google OAuth and session storage in the database.
 
@@ -60,7 +60,7 @@ sequenceDiagram
 
 ---
 
-## Tech stack and major dependencies
+## Tech Stack and Major Dependencies
 
 | Area                   | Technology                                                                                                       |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -70,17 +70,16 @@ sequenceDiagram
 | Caching / server state | [TanStack Query](https://tanstack.com/query)                                                                     |
 | UI                     | [Tailwind CSS 4](https://tailwindcss.com/), [Radix UI](https://www.radix-ui.com/), [Lucide](https://lucide.dev/) |
 | Charts                 | [Recharts](https://recharts.org/)                                                                                |
-| Stock data             | [yahoo-finance2](https://github.com/gadicc/yahoo-finance2), optional Finnhub / Twelve Data                       |
+| Stock data             | [yahoo-finance2](https://github.com/gadicc/yahoo-finance2), Finnhub / Twelve Data                       |
 | Validation / env       | [Zod](https://zod.dev/)                                                                                          |
 | Logging                | [Pino](https://getpino.io/)                                                                                      |
-| Errors (optional)      | [@sentry/nextjs](https://docs.sentry.io/platforms/javascript/guides/nextjs/)                                     |
+| Errors                 | [@sentry/nextjs](https://docs.sentry.io/platforms/javascript/guides/nextjs/)                                     |
 | Quality                | ESLint, Prettier, Vitest, Husky                                                                                  |
 
-Runtime requirement: **Node.js >= 20.11.0 and < 25** (see `package.json` `engines`).
 
 ---
 
-## Installation and setup (local)
+## Installation and Setup (Local)
 
 These steps were checked on a clean `npm install` and `npm run typecheck` in this repository. You need **PostgreSQL** running locally (or a cloud URL in `DATABASE_URL`) before migrations will succeed.
 
@@ -124,8 +123,6 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-**Note:** On first `npm install`, Husky may try to configure git hooks. If that fails in a restricted environment, the app still runs; on a normal machine hooks install as usual.
-
 **Optional checks:**
 
 ```bash
@@ -136,17 +133,17 @@ npm test
 
 ---
 
-## Usage examples
+## Usage Examples
 
-### Run the app
+### Run the App
 
 ```bash
 npm run dev
 ```
 
-Default dev server: **http://localhost:3000** (Turbopack).
+Default dev server: **http://localhost:3000**
 
-### Production-style run (after build)
+### Production Run
 
 ```bash
 npm run build
@@ -158,7 +155,7 @@ npm start
 1. Click **Sign In** and complete Google OAuth.
 2. On the **Dashboard**, use the search box: type **`AAPL`** or **`Apple`** and open a symbol.
 3. Add symbols to the **Watchlist**; open **Portfolio** to create holdings or transactions.
-4. **Analytics** summarizes allocation; **Alerts** can watch price thresholds (cron route exists for scheduled checks if you configure it).
+4. **Analytics** summarizes allocation; **Alerts** can watch price thresholds.
 
 ### Example: API without browser (session required for most routes)
 
@@ -203,11 +200,11 @@ Stock-Tracker/
 
 ---
 
-## Deployment (Vercel + Supabase-style Postgres)
+## Deployment (Vercel + Supabase Postgres)
 
 - **Build:** `vercel-build` runs `prisma generate`, `prisma migrate deploy`, then `next build` (see `vercel.json` and `package.json`).
 - **Env:** Set `DATABASE_URL`, `DIRECT_URL` (can match pooler URL if you only use Supabase session pooler), `NEXTAUTH_URL` (your public origin), `NEXTAUTH_SECRET`, Google OAuth IDs.
-- **OAuth:** Authorized origins and redirect URIs must match the deployed host exactly (avoid `redirect_uri_mismatch`).
+- **OAuth:** Authorized origins and redirect URIs must match the deployed host exactly.
 
 ---
 
