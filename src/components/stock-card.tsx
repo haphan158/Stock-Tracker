@@ -2,8 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
-import { TrendingUp, TrendingDown, Minus, Star, Plus } from 'lucide-react';
-import { formatCurrency, formatPercentage, getChangeColor } from '@/src/lib/utils';
+import { TrendingUp, TrendingDown, Minus, Star } from 'lucide-react';
+import { formatCurrency, formatNumber, formatPercentage, getChangeColor } from '@/src/lib/utils';
 import { useState } from 'react';
 
 interface StockCardProps {
@@ -70,6 +70,8 @@ export function StockCard({
             onClick={handleWatchlistToggle}
             disabled={isLoading}
             className="p-2 h-auto"
+            aria-label={isInWatchlist ? `Remove ${symbol} from watchlist` : `Add ${symbol} to watchlist`}
+            aria-pressed={isInWatchlist}
           >
             {isInWatchlist ? (
               <Star className="h-5 w-5 text-yellow-500 fill-current" />
@@ -106,18 +108,18 @@ export function StockCard({
           {(marketCap || volume) && (
             <div className="pt-2 border-t border-gray-100">
               <div className="grid grid-cols-2 gap-4 text-xs text-gray-600">
-                {marketCap && (
+                {marketCap ? (
                   <div>
                     <span className="block font-medium">Market Cap</span>
-                    <span>{marketCap.toLocaleString()}</span>
+                    <span>{formatNumber(marketCap)}</span>
                   </div>
-                )}
-                {volume && (
+                ) : null}
+                {volume ? (
                   <div>
                     <span className="block font-medium">Volume</span>
-                    <span>{volume.toLocaleString()}</span>
+                    <span>{formatNumber(volume)}</span>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           )}

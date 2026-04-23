@@ -1,81 +1,135 @@
 'use client';
 
+import { useState, type FormEvent } from 'react';
 import { Navigation } from '@/src/components/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
-import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { Input } from '@/src/components/ui/input';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, X } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '@/src/lib/utils';
+import {
+  useDeleteHolding,
+  usePortfolio,
+  useUpsertHolding,
+} from '@/src/hooks/usePortfolio';
 
-// Mock portfolio data
-const mockPortfolio = [
-  {
-    symbol: 'AAPL',
-    name: 'Apple Inc.',
-    shares: 10,
-    averagePrice: 145.50,
-    currentPrice: 150.25,
-    totalValue: 1502.50,
-    totalCost: 1455.00,
-    gainLoss: 47.50,
-    gainLossPercent: 3.26,
-  },
-  {
-    symbol: 'GOOGL',
-    name: 'Alphabet Inc.',
-    shares: 5,
-    averagePrice: 2700.00,
-    currentPrice: 2750.80,
-    totalValue: 13754.00,
-    totalCost: 13500.00,
-    gainLoss: 254.00,
-    gainLossPercent: 1.88,
-  },
-  {
-    symbol: 'MSFT',
-    name: 'Microsoft Corporation',
-    shares: 8,
-    averagePrice: 310.00,
-    currentPrice: 320.45,
-    totalValue: 2563.60,
-    totalCost: 2480.00,
-    gainLoss: 83.60,
-    gainLossPercent: 3.37,
-  },
-];
+export default function PortfolioPage() {
+  const { data, isLoading, error } = usePortfolio();
+  const upsertHolding = useUpsertHolding();
+  const deleteHolding = useDeleteHolding();
 
-export default function Portfolio() {
-  const { data: session } = useSession();
+  const [showForm, setShowForm] = useState(false);
+  const [symbol, setSymbol] = useState('');
+  const [shares, setShares] = useState('');
+  const [averageCost, setAverageCost] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const totalPortfolioValue = mockPortfolio.reduce((sum, stock) => sum + stock.totalValue, 0);
-  const totalPortfolioCost = mockPortfolio.reduce((sum, stock) => sum + stock.totalCost, 0);
-  const totalGainLoss = totalPortfolioValue - totalPortfolioCost;
-  const totalGainLossPercent = (totalGainLoss / totalPortfolioCost) * 100;
+  const holdings = data?.holdings ?? [];
+  const summary = data?.summary;
+
+  const resetForm = () => {
+    setSymbol('');
+    setShares('');
+    setAverageCost('');
+    setFormError(null);
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setFormError(null);
+
+    const sym = symbol.trim().toUpperCase();
+    const sharesNum = Number(shares);
+    const costNum = Number(averageCost);
+
+    if (!/^[A-Z0-9.\-]{1,10}$/.test(sym)) {
+      setFormError('Enter a valid symbol');
+      return;
+    }
+    if (!Number.isFinite(sharesNum) || sharesNum <= 0) {
+      setFormError('Shares must be a positive number');
+      return;
+    }
+    if (!Number.isFinite(costNum) || costNum < 0) {
+      setFormError('Average cost must be zero or greater');
+      return;
+    }
+
+    try {
+      await upsertHolding.mutateAsync({ symbol: sym, shares: sharesNum, averageCost: costNum });
+      resetForm();
+      setShowForm(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to save holding');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Portfolio
-              </h1>
-              <p className="text-gray-600">
-                Track your investments and performance.
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio</h1>
+              <p className="text-gray-600">Track your investments and performance.</p>
             </div>
-            <Button className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Add Stock</span>
+            <Button
+              onClick={() => {
+                setShowForm((prev) => !prev);
+                setFormError(null);
+              }}
+              className="flex items-center space-x-2"
+            >
+              {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              <span>{showForm ? 'Cancel' : 'Add Stock'}</span>
             </Button>
           </div>
         </div>
 
-        {/* Portfolio Summary */}
+        {showForm ? (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Add or Update Holding</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <Input
+                  value={symbol}
+                  onChange={(event) => setSymbol(event.target.value)}
+                  placeholder="Symbol (e.g. AAPL)"
+                  aria-label="Symbol"
+                  className="uppercase"
+                />
+                <Input
+                  value={shares}
+                  onChange={(event) => setShares(event.target.value)}
+                  placeholder="Shares"
+                  inputMode="decimal"
+                  aria-label="Shares"
+                />
+                <Input
+                  value={averageCost}
+                  onChange={(event) => setAverageCost(event.target.value)}
+                  placeholder="Avg cost per share"
+                  inputMode="decimal"
+                  aria-label="Average cost per share"
+                />
+                <Button type="submit" disabled={upsertHolding.isPending}>
+                  {upsertHolding.isPending ? 'Saving…' : 'Save'}
+                </Button>
+                {formError ? (
+                  <p className="md:col-span-4 text-sm text-red-600">{formError}</p>
+                ) : null}
+                <p className="md:col-span-4 text-xs text-gray-500">
+                  Adding an existing symbol overwrites its shares and average cost.
+                </p>
+              </form>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -83,12 +137,8 @@ export default function Portfolio() {
               <DollarSign className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(totalPortfolioValue)}
-              </div>
-              <p className="text-xs text-gray-500">
-                Current portfolio value
-              </p>
+              <div className="text-2xl font-bold">{formatCurrency(summary?.totalValue ?? 0)}</div>
+              <p className="text-xs text-gray-500">Current portfolio value</p>
             </CardContent>
           </Card>
 
@@ -98,30 +148,34 @@ export default function Portfolio() {
               <DollarSign className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(totalPortfolioCost)}
-              </div>
-              <p className="text-xs text-gray-500">
-                Total amount invested
-              </p>
+              <div className="text-2xl font-bold">{formatCurrency(summary?.totalCost ?? 0)}</div>
+              <p className="text-xs text-gray-500">Total amount invested</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Gain/Loss</CardTitle>
-              {totalGainLoss >= 0 ? (
+              {(summary?.totalGainLoss ?? 0) >= 0 ? (
                 <TrendingUp className="h-4 w-4 text-green-600" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-red-600" />
               )}
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(totalGainLoss)}
+              <div
+                className={`text-2xl font-bold ${
+                  (summary?.totalGainLoss ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                {formatCurrency(summary?.totalGainLoss ?? 0)}
               </div>
-              <p className={`text-xs ${totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatPercentage(totalGainLossPercent)}
+              <p
+                className={`text-xs ${
+                  (summary?.totalGainLoss ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                {formatPercentage(summary?.totalGainLossPercent ?? 0)}
               </p>
             </CardContent>
           </Card>
@@ -129,51 +183,81 @@ export default function Portfolio() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Holdings</CardTitle>
-              <span className="text-2xl font-bold">{mockPortfolio.length}</span>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {mockPortfolio.length}
-              </div>
-              <p className="text-xs text-gray-500">
-                Different stocks
-              </p>
+              <div className="text-2xl font-bold">{summary?.holdingsCount ?? 0}</div>
+              <p className="text-xs text-gray-500">Different stocks</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Portfolio Holdings */}
         <Card>
           <CardHeader>
             <CardTitle>Your Holdings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockPortfolio.map((stock) => (
-                <div key={stock.symbol} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{stock.symbol}</h3>
-                        <p className="text-sm text-gray-600">{stock.name}</p>
+            {error ? (
+              <p className="text-red-600">Failed to load holdings.</p>
+            ) : isLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 bg-gray-100 animate-pulse rounded-lg" />
+                ))}
+              </div>
+            ) : holdings.length === 0 ? (
+              <p className="text-gray-500 text-center py-6">
+                No holdings yet — click <span className="font-medium">Add Stock</span> to get started.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {holdings.map((holding) => (
+                  <div
+                    key={holding.id}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{holding.symbol}</h3>
+                          <p className="text-sm text-gray-600">{holding.name}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-500">
+                        {holding.shares.toLocaleString(undefined, { maximumFractionDigits: 6 })}{' '}
+                        shares @ {formatCurrency(holding.averageCost)} avg ·{' '}
+                        <span className="text-gray-700">
+                          now {formatCurrency(holding.currentPrice)}
+                        </span>
                       </div>
                     </div>
-                    <div className="mt-2 text-sm text-gray-500">
-                      {stock.shares} shares @ {formatCurrency(stock.averagePrice)} avg
+
+                    <div className="text-right">
+                      <div className="font-semibold text-gray-900">
+                        {formatCurrency(holding.marketValue)}
+                      </div>
+                      <div
+                        className={`text-sm ${
+                          holding.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {formatCurrency(holding.gainLoss)} ({formatPercentage(holding.gainLossPercent)})
+                      </div>
                     </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-4 text-red-600 hover:bg-red-50"
+                      onClick={() => deleteHolding.mutate(holding.id)}
+                      aria-label={`Remove ${holding.symbol} from portfolio`}
+                      disabled={deleteHolding.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  
-                  <div className="text-right">
-                    <div className="font-semibold text-gray-900">
-                      {formatCurrency(stock.totalValue)}
-                    </div>
-                    <div className={`text-sm ${stock.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(stock.gainLoss)} ({formatPercentage(stock.gainLossPercent)})
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
