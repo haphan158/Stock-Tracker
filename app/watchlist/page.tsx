@@ -7,6 +7,8 @@ import { Navigation } from '@/src/components/navigation';
 import { StockCard } from '@/src/components/stock-card';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { EmptyState } from '@/src/components/ui/empty-state';
+import { StockCardGridSkeleton } from '@/src/components/ui/skeletons';
 import { useAddToWatchlist, useRemoveFromWatchlist, useWatchlist } from '@/src/hooks/useWatchlist';
 import { formatNumber } from '@/src/lib/utils';
 
@@ -90,17 +92,17 @@ export default function WatchlistPage() {
         </div>
 
         {error ? (
-          <div className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4"
+          >
             Error loading your watchlist. Please try again.
           </div>
         ) : null}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="h-40 animate-pulse" />
-            ))}
-          </div>
+          <StockCardGridSkeleton count={3} />
         ) : watchlist.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {watchlist.map((item) => {
@@ -133,22 +135,19 @@ export default function WatchlistPage() {
             })}
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Star className="text-muted-foreground/60 mx-auto mb-4 h-12 w-12" />
-              <h3 className="text-foreground mb-2 text-lg font-medium">Your watchlist is empty</h3>
-              <p className="text-muted-foreground mb-4">
-                Start building your watchlist by adding stocks you want to track.
-              </p>
-              <div className="flex justify-center">
-                <AddSymbolForm
-                  onSubmit={(symbol) => addWatchlist.mutateAsync(symbol)}
-                  placeholder="e.g. AAPL"
-                  submitLabel="Add to Watchlist"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Star}
+            tone="amber"
+            title="Your watchlist is empty"
+            description="Star a stock anywhere, or add one by symbol to start tracking it."
+            action={
+              <AddSymbolForm
+                onSubmit={(symbol) => addWatchlist.mutateAsync(symbol)}
+                placeholder="e.g. AAPL"
+                submitLabel="Add your first stock"
+              />
+            }
+          />
         )}
       </main>
     </div>

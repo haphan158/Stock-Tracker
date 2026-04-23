@@ -6,10 +6,12 @@ import { Search, TrendingUp, TrendingDown, DollarSign, BarChart3, RefreshCw } fr
 import { useSession } from 'next-auth/react';
 
 import { Navigation } from '@/src/components/navigation';
+import { RelativeTime } from '@/src/components/relative-time';
 import { StockCard } from '@/src/components/stock-card';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Input } from '@/src/components/ui/input';
+import { StockCardGridSkeleton } from '@/src/components/ui/skeletons';
 import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
 import {
   useStocks,
@@ -99,6 +101,18 @@ export function DashboardClient({ initialStocks, initialMarketSummary }: Dashboa
     refreshStocks.mutate(stableSymbols);
   };
 
+  // Latest `lastUpdated` across the currently-rendered stocks. `stocks` comes
+  // from react-query; this recomputes cheaply on every render and stays in sync
+  // with the cached data — no separate "last refreshed" state to drift.
+  const latestUpdate = useMemo(() => {
+    let latest: Date | null = null;
+    for (const s of stocks) {
+      const t = s.lastUpdated instanceof Date ? s.lastUpdated : new Date(s.lastUpdated);
+      if (!Number.isNaN(t.getTime()) && (!latest || t > latest)) latest = t;
+    }
+    return latest;
+  }, [stocks]);
+
   return (
     <div className="bg-background min-h-screen">
       <Navigation />
@@ -182,29 +196,49 @@ export function DashboardClient({ initialStocks, initialMarketSummary }: Dashboa
               className="pl-10"
             />
           </div>
-          <Button
-            onClick={handleRefresh}
-            disabled={refreshStocks.isPending || stocksLoading}
-            className="flex items-center space-x-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshStocks.isPending ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            {latestUpdate ? (
+              <RelativeTime
+                date={latestUpdate}
+                className="text-muted-foreground hidden text-xs sm:inline"
+              />
+            ) : null}
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshStocks.isPending || stocksLoading}
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshStocks.isPending ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </Button>
+          </div>
         </div>
 
         {searchError ? (
-          <div className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4"
+          >
             <p>
               Search is temporarily unavailable. You can still type an exact ticker (e.g.{' '}
               <code className="font-mono">AAPL</code>) — it&apos;ll be looked up directly.
             </p>
           </div>
         ) : stocksError && stocks.length === 0 ? (
-          <div className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4"
+          >
             <p>Couldn&apos;t load stock data right now. Try refreshing in a minute.</p>
           </div>
         ) : stocks.length === 0 && !stocksLoading && stableSymbols.length > 0 ? (
-          <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-300">
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200"
+          >
             <p>
               Yahoo Finance is throttling requests from this network. Data will reappear
               automatically once the rate-limit clears (usually 10–30 minutes).
@@ -214,20 +248,7 @@ export function DashboardClient({ initialStocks, initialMarketSummary }: Dashboa
 
         {/* Stock Grid */}
         {stocksLoading || searchPending ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-3">
-                  <div className="bg-muted mb-2 h-6 w-1/3 rounded"></div>
-                  <div className="bg-muted h-4 w-2/3 rounded"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted mb-4 h-8 w-1/2 rounded"></div>
-                  <div className="bg-muted h-4 w-1/3 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <StockCardGridSkeleton />
         ) : stocks.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {stocks.map((stock) => (
