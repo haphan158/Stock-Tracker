@@ -3,7 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/src/components/providers/auth-provider";
 import { QueryProvider } from "@/src/components/providers/query-provider";
-import { Toaster } from "sonner";
+import { ThemeProvider } from "@/src/components/providers/theme-provider";
+import { ThemedToaster } from "@/src/components/providers/themed-toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,14 +19,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <QueryProvider>
-          <AuthProvider>
-            {children}
-            <Toaster richColors closeButton position="top-right" />
-          </AuthProvider>
-        </QueryProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-background text-foreground min-h-screen antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <QueryProvider>
+            <AuthProvider>
+              {children}
+              <ThemedToaster />
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -53,7 +53,7 @@ export function AddSymbolForm({
       <Button type="submit" disabled={disabled || submitting || value.trim().length === 0}>
         {submitting ? 'Saving…' : submitLabel}
       </Button>
-      {error ? <p className="text-sm text-red-600 self-center">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive self-center">{error}</p> : null}
     </form>
   );
 }

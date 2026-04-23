@@ -35,7 +35,7 @@ export function StockCard({
 
   const handleWatchlistToggle = async () => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     try {
       if (isInWatchlist && onRemoveFromWatchlist) {
@@ -49,20 +49,20 @@ export function StockCard({
   };
 
   const getChangeIcon = () => {
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
-    return <Minus className="h-4 w-4 text-gray-600" />;
+    if (change > 0) return <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
+    if (change < 0) return <TrendingDown className="h-4 w-4 text-rose-600 dark:text-rose-400" />;
+    return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200">
+    <Card className="hover:shadow-lg hover:border-primary/40 transition-all duration-200">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg font-semibold text-foreground">
               {symbol}
             </CardTitle>
-            <p className="text-sm text-gray-600 mt-1">{name}</p>
+            <p className="text-sm text-muted-foreground mt-1">{name}</p>
           </div>
           <Button
             variant="ghost"
@@ -74,18 +74,18 @@ export function StockCard({
             aria-pressed={isInWatchlist}
           >
             {isInWatchlist ? (
-              <Star className="h-5 w-5 text-yellow-500 fill-current" />
+              <Star className="h-5 w-5 text-amber-500 fill-current" />
             ) : (
-              <Star className="h-5 w-5 text-gray-400" />
+              <Star className="h-5 w-5 text-muted-foreground" />
             )}
           </Button>
         </div>
       </CardHeader>
-      
+
       <CardContent className="pt-0">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-2xl font-bold text-foreground">
               {formatCurrency(currentPrice)}
             </span>
             <div className="flex items-center space-x-1">
@@ -95,28 +95,28 @@ export function StockCard({
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between">
             <span className={`text-sm font-medium ${getChangeColor(changePercent)}`}>
               {formatPercentage(changePercent)}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {change > 0 ? 'Gain' : change < 0 ? 'Loss' : 'No Change'}
             </span>
           </div>
-          
+
           {(marketCap || volume) && (
-            <div className="pt-2 border-t border-gray-100">
-              <div className="grid grid-cols-2 gap-4 text-xs text-gray-600">
+            <div className="pt-2 border-t border-border">
+              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
                 {marketCap ? (
                   <div>
-                    <span className="block font-medium">Market Cap</span>
+                    <span className="block font-medium text-foreground">Market Cap</span>
                     <span>{formatNumber(marketCap)}</span>
                   </div>
                 ) : null}
                 {volume ? (
                   <div>
-                    <span className="block font-medium">Volume</span>
+                    <span className="block font-medium text-foreground">Volume</span>
                     <span>{formatNumber(volume)}</span>
                   </div>
                 ) : null}

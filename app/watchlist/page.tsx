@@ -24,14 +24,14 @@ export default function WatchlistPage() {
   const losers = priced.filter((item) => (item.quote?.change ?? 0) < 0).length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Watchlist</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold text-foreground mb-2">Watchlist</h1>
+              <p className="text-muted-foreground">
                 Track your favorite stocks and stay updated with market movements.
               </p>
             </div>
@@ -47,11 +47,11 @@ export default function WatchlistPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Stocks</CardTitle>
-              <Star className="h-4 w-4 text-yellow-500" />
+              <Star className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{watchlist.length}</div>
-              <p className="text-xs text-gray-500">Stocks in watchlist</p>
+              <div className="text-2xl font-bold text-foreground">{watchlist.length}</div>
+              <p className="text-xs text-muted-foreground">Stocks in watchlist</p>
             </CardContent>
           </Card>
 
@@ -60,38 +60,38 @@ export default function WatchlistPage() {
               <CardTitle className="text-sm font-medium">Total Market Cap</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-foreground">
                 {totalMarketCap > 0 ? `$${formatNumber(totalMarketCap)}` : '—'}
               </div>
-              <p className="text-xs text-gray-500">Combined market cap</p>
+              <p className="text-xs text-muted-foreground">Combined market cap</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gainers</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{gainers}</div>
-              <p className="text-xs text-gray-500">Stocks in positive territory</p>
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{gainers}</div>
+              <p className="text-xs text-muted-foreground">Stocks in positive territory</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Losers</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-600" />
+              <TrendingDown className="h-4 w-4 text-rose-600 dark:text-rose-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{losers}</div>
-              <p className="text-xs text-gray-500">Stocks in negative territory</p>
+              <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{losers}</div>
+              <p className="text-xs text-muted-foreground">Stocks in negative territory</p>
             </CardContent>
           </Card>
         </div>
 
         {error ? (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+          <div className="mb-6 p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
             Error loading your watchlist. Please try again.
           </div>
         ) : null}
@@ -136,9 +136,9 @@ export default function WatchlistPage() {
         ) : (
           <Card>
             <CardContent className="text-center py-12">
-              <Star className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Your watchlist is empty</h3>
-              <p className="text-gray-500 mb-4">
+              <Star className="h-12 w-12 text-muted-foreground/60 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Your watchlist is empty</h3>
+              <p className="text-muted-foreground mb-4">
                 Start building your watchlist by adding stocks you want to track.
               </p>
               <div className="flex justify-center">
