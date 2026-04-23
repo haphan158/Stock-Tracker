@@ -1,5 +1,8 @@
-import yahooFinance from 'yahoo-finance2';
-import { fetchHistoryWithFallback, fetchQuotesWithFallback } from '@/src/lib/providers';
+import {
+  fetchHistoryWithFallback,
+  fetchQuotesWithFallback,
+  searchSymbolsWithFallback,
+} from '@/src/lib/providers';
 
 export interface StockData {
   symbol: string;
@@ -18,7 +21,7 @@ export interface StockData {
   lastUpdated: Date;
 }
 
-yahooFinance.suppressNotices(['yahooSurvey']);
+const TICKER_LIKE = /^[A-Za-z0-9][A-Za-z0-9.\-]{0,9}$/;
 
 export class StockService {
   /** Real-time quote for a single symbol, routed through the provider chain. */
@@ -36,26 +39,33 @@ export class StockService {
   }
 
   /**
-   * Search Yahoo Finance for symbols matching the query, then fetch quotes for
-   * the top matches through the provider chain.
+   * Resolve a free-text query to quotes. Tries the provider chain's symbol
+   * search (Yahoo → Finnhub) first; if both are empty but the query looks
+   * like a ticker, fall through to fetching a quote for it directly so power
+   * users can still type "AAPL" when search providers are throttled.
    */
   static async searchStocks(query: string): Promise<StockData[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
 
-    try {
-      const result = await yahooFinance.search(trimmed, { quotesCount: 15, newsCount: 0 });
-      const symbols = (result.quotes ?? [])
-        .map((q) => (q as { symbol?: string }).symbol)
-        .filter((s): s is string => typeof s === 'string' && s.length > 0)
-        .slice(0, 15);
+    let matches = await searchSymbolsWithFallback(trimmed);
 
-      if (symbols.length === 0) return [];
-      return await this.getMultipleStocks(symbols);
-    } catch (error) {
-      console.error('Error searching stocks:', error);
-      return [];
+    if (matches.length === 0 && TICKER_LIKE.test(trimmed)) {
+      const upper = trimmed.toUpperCase();
+      matches = [{ symbol: upper, name: upper }];
     }
+
+    if (matches.length === 0) return [];
+
+    const symbols = matches.map((m) => m.symbol).slice(0, 15);
+    const quotes = await this.getMultipleStocks(symbols);
+
+    // Preserve the order returned by the symbol-search provider so "best
+    // match" stays on top even after the quote fan-out reorders things.
+    const ranking = new Map(symbols.map((s, i) => [s, i]));
+    return quotes.sort(
+      (a, b) => (ranking.get(a.symbol) ?? 99) - (ranking.get(b.symbol) ?? 99),
+    );
   }
 
   /** Company-name-prioritized search. */

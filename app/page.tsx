@@ -27,7 +27,14 @@ export default function Dashboard() {
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 350);
   const [displayedStocks, setDisplayedStocks] = useState<string[]>(defaultStocks);
 
-  const { data: searchResults = [], isLoading: searchLoading } = useStockSearch(debouncedSearch);
+  const {
+    data: searchResults = [],
+    isLoading: searchLoading,
+    error: searchError,
+  } = useStockSearch(debouncedSearch);
+
+  const isSearching = searchTerm.trim().length > 0;
+  const searchPending = isSearching && (debouncedSearch !== searchTerm.trim() || searchLoading);
 
   useEffect(() => {
     if (!debouncedSearch) {
@@ -167,7 +174,14 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {stocksError && stocks.length === 0 ? (
+        {searchError ? (
+          <div className="mb-6 p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
+            <p>
+              Search is temporarily unavailable. You can still type an exact ticker (e.g.{' '}
+              <code className="font-mono">AAPL</code>) — it&apos;ll be looked up directly.
+            </p>
+          </div>
+        ) : stocksError && stocks.length === 0 ? (
           <div className="mb-6 p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
             <p>Couldn&apos;t load stock data right now. Try refreshing in a minute.</p>
           </div>
@@ -181,7 +195,7 @@ export default function Dashboard() {
         ) : null}
 
         {/* Stock Grid */}
-        {stocksLoading ? (
+        {stocksLoading || searchPending ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
               <Card key={i} className="animate-pulse">
@@ -215,7 +229,9 @@ export default function Dashboard() {
         ) : (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {searchTerm ? 'No stocks found matching your search.' : 'No stocks available.'}
+              {isSearching
+                ? `No stocks found matching "${searchTerm.trim()}".`
+                : 'No stocks available.'}
             </p>
           </div>
         )}

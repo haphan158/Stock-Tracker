@@ -1,5 +1,5 @@
 import type { StockData } from '@/src/lib/stock-service';
-import type { HistoricalPoint, QuoteProvider } from '@/src/lib/providers/types';
+import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 import { yahooProvider } from '@/src/lib/providers/yahoo';
 import { finnhubProvider } from '@/src/lib/providers/finnhub';
 
@@ -63,6 +63,30 @@ export async function fetchHistoryWithFallback(
     }
   }
   if (lastError) throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  return [];
+}
+
+/**
+ * Try each provider in order; return the first non-empty result. Unlike quotes
+ * we don't merge across providers because ranking differs and duplicates are
+ * noisy. Errors are swallowed so one rate-limited provider doesn't kill search.
+ */
+export async function searchSymbolsWithFallback(query: string): Promise<SymbolMatch[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const providers = chain().filter((p) => typeof p.searchSymbols === 'function');
+  for (const provider of providers) {
+    try {
+      const matches = await provider.searchSymbols!(trimmed);
+      if (matches.length > 0) return matches;
+    } catch (error) {
+      console.warn(
+        `[providers] ${provider.name} search failed for "${trimmed}"`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
   return [];
 }
 

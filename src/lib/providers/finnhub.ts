@@ -1,5 +1,5 @@
 import type { StockData } from '@/src/lib/stock-service';
-import type { HistoricalPoint, QuoteProvider } from '@/src/lib/providers/types';
+import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 
 const BASE_URL = 'https://finnhub.io/api/v1';
 const PROFILE_TTL_MS = 24 * 60 * 60 * 1000; // Finnhub profiles rarely change.
@@ -101,6 +101,36 @@ export const finnhubProvider: QuoteProvider = {
       }
     }
     return stocks;
+  },
+  async searchSymbols(query) {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+    interface FinnhubSearchResult {
+      count: number;
+      result: Array<{
+        symbol?: string;
+        displaySymbol?: string;
+        description?: string;
+        type?: string;
+      }>;
+    }
+    const data = await fetchJson<FinnhubSearchResult>(
+      `/search?q=${encodeURIComponent(trimmed)}`,
+    );
+    const matches: SymbolMatch[] = [];
+    const seen = new Set<string>();
+    for (const row of data.result ?? []) {
+      // Finnhub returns a mix of exchanges for the same company, e.g.
+      // AAPL, AAPL.SW, AAPL.MX — prefer plain US symbols (no dot) first.
+      const raw = row.displaySymbol || row.symbol;
+      if (!raw) continue;
+      const symbol = raw.toUpperCase();
+      if (seen.has(symbol)) continue;
+      seen.add(symbol);
+      matches.push({ symbol, name: row.description || symbol });
+      if (matches.length >= 15) break;
+    }
+    return matches;
   },
   async getHistory(symbol, days) {
     const to = Math.floor(Date.now() / 1000);

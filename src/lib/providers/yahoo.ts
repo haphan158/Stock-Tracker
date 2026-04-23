@@ -1,6 +1,6 @@
 import yahooFinance from 'yahoo-finance2';
 import type { StockData } from '@/src/lib/stock-service';
-import type { HistoricalPoint, QuoteProvider } from '@/src/lib/providers/types';
+import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 
 yahooFinance.suppressNotices(['yahooSurvey']);
 
@@ -54,6 +54,25 @@ export const yahooProvider: QuoteProvider = {
     return list
       .filter((q): q is Extract<YahooQuote, { symbol: string }> => !!q && typeof q.symbol === 'string')
       .map(toStockData);
+  },
+  async searchSymbols(query) {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+    const result = await yahooFinance.search(trimmed, { quotesCount: 15, newsCount: 0 });
+    const quotes = (result.quotes ?? []) as Array<{
+      symbol?: string;
+      shortname?: string;
+      longname?: string;
+    }>;
+    const matches: SymbolMatch[] = [];
+    for (const q of quotes) {
+      if (!q.symbol) continue;
+      matches.push({
+        symbol: q.symbol.toUpperCase(),
+        name: q.longname || q.shortname || q.symbol,
+      });
+    }
+    return matches;
   },
   async getHistory(symbol, days) {
     const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
