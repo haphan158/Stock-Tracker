@@ -64,6 +64,10 @@ export function useUpsertHolding() {
   return useMutation({
     mutationFn: createOrUpdateHolding,
     onSuccess: () => qc.invalidateQueries({ queryKey: PORTFOLIO_KEY }),
+    meta: {
+      successMessage: 'Holding saved',
+      errorMessage: 'Could not save holding',
+    },
   });
 }
 
@@ -72,6 +76,10 @@ export function useUpdateHolding() {
   return useMutation({
     mutationFn: patchHolding,
     onSuccess: () => qc.invalidateQueries({ queryKey: PORTFOLIO_KEY }),
+    meta: {
+      successMessage: 'Holding updated',
+      errorMessage: 'Could not update holding',
+    },
   });
 }
 
@@ -80,5 +88,9 @@ export function useDeleteHolding() {
   return useMutation({
     mutationFn: deleteHolding,
     onSuccess: () => qc.invalidateQueries({ queryKey: PORTFOLIO_KEY }),
+    meta: {
+      successMessage: 'Holding removed',
+      errorMessage: 'Could not remove holding',
+    },
   });
 }

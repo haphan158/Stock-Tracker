@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -16,8 +18,10 @@ import {
 } from 'recharts';
 import { Navigation } from '@/src/components/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { Button } from '@/src/components/ui/button';
 import { BarChart3, TrendingDown, TrendingUp } from 'lucide-react';
 import { usePortfolio } from '@/src/hooks/usePortfolio';
+import { usePortfolioAnalytics } from '@/src/hooks/usePortfolioAnalytics';
 import { formatCurrency, formatPercentage } from '@/src/lib/utils';
 
 const ALLOCATION_COLORS = [
@@ -31,17 +35,27 @@ const ALLOCATION_COLORS = [
   '#64748b',
 ];
 
+const TIME_RANGES = [
+  { label: '1M', days: 30 },
+  { label: '3M', days: 90 },
+  { label: '6M', days: 180 },
+  { label: '1Y', days: 365 },
+] as const;
+
 export default function AnalyticsPage() {
+  const [rangeDays, setRangeDays] = useState<number>(90);
+
   const { data, isLoading, error } = usePortfolio();
   const holdings = useMemo(() => data?.holdings ?? [], [data]);
   const summary = data?.summary;
 
-  const allocation = useMemo(() => {
+  const analytics = usePortfolioAnalytics(rangeDays, holdings.length > 0);
+
+  const holdingAllocation = useMemo(() => {
     const totalValue = holdings.reduce((sum, h) => sum + h.marketValue, 0);
     return holdings
       .map((h) => ({
         symbol: h.symbol,
-        name: h.name,
         value: h.marketValue,
         percent: totalValue > 0 ? (h.marketValue / totalValue) * 100 : 0,
       }))
@@ -61,7 +75,8 @@ export default function AnalyticsPage() {
   );
 
   const bestPerformer = gainLossPerHolding[0];
-  const worstPerformer = gainLossPerHolding[gainLossPerHolding.length - 1];
+  const worstPerformer =
+    gainLossPerHolding.length > 1 ? gainLossPerHolding[gainLossPerHolding.length - 1] : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -135,14 +150,10 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
-                {worstPerformer && worstPerformer !== bestPerformer
-                  ? formatPercentage(worstPerformer.gainLossPercent)
-                  : '—'}
+                {worstPerformer ? formatPercentage(worstPerformer.gainLossPercent) : '—'}
               </div>
               <p className="text-xs text-gray-500">
-                {worstPerformer && worstPerformer !== bestPerformer
-                  ? worstPerformer.symbol
-                  : 'No holdings'}
+                {worstPerformer ? worstPerformer.symbol : 'No holdings'}
               </p>
             </CardContent>
           </Card>
@@ -159,68 +170,185 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Gain / Loss by Holding (%)</CardTitle>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle>Portfolio Value Over Time</CardTitle>
+                <div className="flex gap-1">
+                  {TIME_RANGES.map((range) => (
+                    <Button
+                      key={range.days}
+                      size="sm"
+                      variant={rangeDays === range.days ? 'default' : 'outline'}
+                      onClick={() => setRangeDays(range.days)}
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={gainLossPerHolding}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="symbol" />
-                      <YAxis tickFormatter={(value: number) => `${value}%`} />
-                      <Tooltip
-                        formatter={(value: number, key: string) =>
-                          key === 'gainLossPercent'
-                            ? [`${value.toFixed(2)}%`, 'Gain/Loss %']
-                            : [formatCurrency(value), 'Gain/Loss']
-                        }
-                      />
-                      <Bar dataKey="gainLossPercent">
-                        {gainLossPerHolding.map((entry) => (
-                          <Cell
-                            key={entry.symbol}
-                            fill={entry.gainLossPercent >= 0 ? '#16a34a' : '#dc2626'}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {analytics.isLoading ? (
+                    <div className="h-full flex items-center justify-center text-gray-500">
+                      Loading history…
+                    </div>
+                  ) : analytics.error ? (
+                    <div className="h-full flex items-center justify-center text-red-600">
+                      Couldn&apos;t load history.
+                    </div>
+                  ) : (analytics.data?.performance.length ?? 0) === 0 ? (
+                    <div className="h-full flex items-center justify-center text-gray-500">
+                      No historical data available for this range.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={analytics.data!.performance}>
+                        <defs>
+                          <linearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value: string) => value.slice(5)}
+                          minTickGap={24}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value: number) =>
+                            value >= 1000 ? `$${(value / 1000).toFixed(1)}k` : `$${value.toFixed(0)}`
+                          }
+                          width={56}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => [formatCurrency(value), 'Value']}
+                          labelFormatter={(label: string) => label}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#2563eb"
+                          strokeWidth={2}
+                          fill="url(#portfolioFill)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gain / Loss by Holding (%)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={gainLossPerHolding}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="symbol" />
+                        <YAxis tickFormatter={(value: number) => `${value}%`} />
+                        <Tooltip
+                          formatter={(value: number, key: string) =>
+                            key === 'gainLossPercent'
+                              ? [`${value.toFixed(2)}%`, 'Gain/Loss %']
+                              : [formatCurrency(value), 'Gain/Loss']
+                          }
+                        />
+                        <Bar dataKey="gainLossPercent">
+                          {gainLossPerHolding.map((entry) => (
+                            <Cell
+                              key={entry.symbol}
+                              fill={entry.gainLossPercent >= 0 ? '#16a34a' : '#dc2626'}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Allocation by Holding</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={holdingAllocation}
+                          dataKey="value"
+                          nameKey="symbol"
+                          innerRadius={50}
+                          outerRadius={100}
+                          paddingAngle={2}
+                        >
+                          {holdingAllocation.map((entry, index) => (
+                            <Cell
+                              key={entry.symbol}
+                              fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
-                <CardTitle>Allocation by Market Value</CardTitle>
+                <CardTitle>Allocation by Sector</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={allocation}
-                        dataKey="value"
-                        nameKey="symbol"
-                        innerRadius={50}
-                        outerRadius={100}
-                        paddingAngle={2}
-                      >
-                        {allocation.map((entry, index) => (
-                          <Cell
-                            key={entry.symbol}
-                            fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number) => formatCurrency(value)}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {analytics.isLoading ? (
+                    <div className="h-full flex items-center justify-center text-gray-500">
+                      Loading sectors…
+                    </div>
+                  ) : (analytics.data?.sectors.length ?? 0) === 0 ? (
+                    <div className="h-full flex items-center justify-center text-gray-500">
+                      Sector data unavailable.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={analytics.data!.sectors}
+                          dataKey="value"
+                          nameKey="sector"
+                          innerRadius={50}
+                          outerRadius={100}
+                          paddingAngle={2}
+                        >
+                          {analytics.data!.sectors.map((entry, index) => (
+                            <Cell
+                              key={entry.sector}
+                              fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number, name: string) => [
+                            formatCurrency(value),
+                            name,
+                          ]}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>

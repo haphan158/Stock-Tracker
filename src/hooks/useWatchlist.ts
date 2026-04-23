@@ -46,6 +46,10 @@ export function useAddToWatchlist() {
   return useMutation({
     mutationFn: addWatchlist,
     onSuccess: () => qc.invalidateQueries({ queryKey: WATCHLIST_KEY }),
+    meta: {
+      successMessage: 'Added to watchlist',
+      errorMessage: 'Could not add to watchlist',
+    },
   });
 }
 
@@ -54,5 +58,9 @@ export function useRemoveFromWatchlist() {
   return useMutation({
     mutationFn: removeWatchlist,
     onSuccess: () => qc.invalidateQueries({ queryKey: WATCHLIST_KEY }),
+    meta: {
+      successMessage: 'Removed from watchlist',
+      errorMessage: 'Could not remove from watchlist',
+    },
   });
 }

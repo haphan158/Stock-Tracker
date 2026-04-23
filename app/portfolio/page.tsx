@@ -213,14 +213,24 @@ export default function PortfolioPage() {
                 {holdings.map((holding) => (
                   <div
                     key={holding.id}
-                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-gray-200 rounded-lg"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between sm:block">
+                        <div className="min-w-0">
                           <h3 className="font-semibold text-gray-900">{holding.symbol}</h3>
-                          <p className="text-sm text-gray-600">{holding.name}</p>
+                          <p className="text-sm text-gray-600 truncate">{holding.name}</p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="sm:hidden -mr-2 text-red-600 hover:bg-red-50"
+                          onClick={() => deleteHolding.mutate(holding.id)}
+                          aria-label={`Remove ${holding.symbol} from portfolio`}
+                          disabled={deleteHolding.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                       <div className="mt-2 text-sm text-gray-500">
                         {holding.shares.toLocaleString(undefined, { maximumFractionDigits: 6 })}{' '}
@@ -231,29 +241,31 @@ export default function PortfolioPage() {
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="font-semibold text-gray-900">
-                        {formatCurrency(holding.marketValue)}
+                    <div className="flex items-center justify-between sm:justify-end gap-4">
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900">
+                          {formatCurrency(holding.marketValue)}
+                        </div>
+                        <div
+                          className={`text-sm ${
+                            holding.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}
+                        >
+                          {formatCurrency(holding.gainLoss)} ({formatPercentage(holding.gainLossPercent)})
+                        </div>
                       </div>
-                      <div
-                        className={`text-sm ${
-                          holding.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {formatCurrency(holding.gainLoss)} ({formatPercentage(holding.gainLossPercent)})
-                      </div>
-                    </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-4 text-red-600 hover:bg-red-50"
-                      onClick={() => deleteHolding.mutate(holding.id)}
-                      aria-label={`Remove ${holding.symbol} from portfolio`}
-                      disabled={deleteHolding.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hidden sm:inline-flex text-red-600 hover:bg-red-50"
+                        onClick={() => deleteHolding.mutate(holding.id)}
+                        aria-label={`Remove ${holding.symbol} from portfolio`}
+                        disabled={deleteHolding.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
