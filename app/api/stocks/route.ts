@@ -1,27 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { StockService } from '@/src/lib/stock-service';
+import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
+import { getCachedQuotes } from '@/src/lib/quote-cache';
+import { guardRequest } from '@/src/lib/api-guard';
+
+const SYMBOL_RE = /^[A-Z0-9.\-]{1,10}$/;
+
+const querySchema = z.object({
+  symbols: z
+    .string()
+    .min(1, 'symbols is required')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean),
+    )
+    .pipe(
+      z
+        .array(z.string().regex(SYMBOL_RE, 'Invalid symbol'))
+        .min(1, 'At least one symbol is required')
+        .max(25, 'At most 25 symbols per request'),
+    ),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const symbols = searchParams.get('symbols');
-    
-    if (!symbols) {
-      return NextResponse.json(
-        { error: 'Symbols parameter is required' },
-        { status: 400 }
-      );
-    }
+  const guard = await guardRequest(request, {
+    requireAuth: false,
+    rateLimit: { limit: 60, windowMs: 60_000 },
+  });
+  if (!guard.ok) return guard.response;
 
-    const symbolList = symbols.split(',').map(s => s.trim().toUpperCase());
-    const stocks = await StockService.getMultipleStocks(symbolList);
-    
+  const parsed = querySchema.safeParse({
+    symbols: request.nextUrl.searchParams.get('symbols') ?? '',
+  });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request', issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const stocks = await getCachedQuotes(parsed.data.symbols);
     return NextResponse.json({ stocks });
   } catch (error) {
     console.error('Error fetching stocks:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch stock data' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch stock data' }, { status: 502 });
   }
 }

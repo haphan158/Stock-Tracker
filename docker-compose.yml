@@ -4,29 +4,35 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/stock_tracker
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=dQVwkB3D6pKo9rK+p21TaY5B8LROptIxiO2POWb81Bo=
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      NODE_ENV: production
     depends_on:
-      - db
-    volumes:
-      - .:/app
-      - /app/node_modules
+      db:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - stock-tracker
 
   db:
-    image: postgres:15
+    image: postgres:16-alpine
     environment:
-      - POSTGRES_DB=stock_tracker
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
     networks:
       - stock-tracker
 

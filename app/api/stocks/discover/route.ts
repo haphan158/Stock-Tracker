@@ -1,50 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { StockService } from '@/src/lib/stock-service';
+import { guardRequest } from '@/src/lib/api-guard';
+
+const querySchema = z.object({
+  q: z.string().trim().min(1, 'q is required').max(64, 'q too long'),
+  type: z.enum(['symbol', 'name', 'all']).default('symbol'),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
-    const type = searchParams.get('type') || 'symbol'; // 'symbol', 'name', 'all'
-    
-    if (!query) {
-      return NextResponse.json(
-        { error: 'Query parameter is required' },
-        { status: 400 }
-      );
-    }
+  const guard = await guardRequest(request, {
+    requireAuth: false,
+    rateLimit: { limit: 30, windowMs: 60_000 },
+  });
+  if (!guard.ok) return guard.response;
 
-    let stocks = [];
-    
-    if (type === 'name') {
-      // Search by company name patterns
-      stocks = await StockService.searchStocksByName(query);
-    } else if (type === 'all') {
-      // Try both symbol and name search
-      const symbolResults = await StockService.searchStocks(query);
-      const nameResults = await StockService.searchStocksByName(query);
-      
-      // Combine and remove duplicates
-      const allStocks = [...symbolResults, ...nameResults];
-      stocks = allStocks.filter((stock, index, self) => 
-        index === self.findIndex(s => s.symbol === stock.symbol)
-      );
-    } else {
-      // Default: symbol search
-      stocks = await StockService.searchStocks(query);
-    }
-    
-    return NextResponse.json({ 
+  const parsed = querySchema.safeParse({
+    q: request.nextUrl.searchParams.get('q') ?? '',
+    type: request.nextUrl.searchParams.get('type') ?? undefined,
+  });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request', issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const { q, type } = parsed.data;
+
+  try {
+    const stocks =
+      type === 'name'
+        ? await StockService.searchStocksByName(q)
+        : await StockService.searchStocks(q);
+
+    return NextResponse.json({
       stocks,
       searchType: type,
-      query,
-      resultsCount: stocks.length
+      query: q,
+      resultsCount: stocks.length,
     });
   } catch (error) {
     console.error('Error discovering stocks:', error);
-    return NextResponse.json(
-      { error: 'Failed to discover stocks' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to discover stocks' }, { status: 502 });
   }
 }

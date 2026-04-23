@@ -1,29 +1,32 @@
-import NextAuth, { NextAuthOptions } from 'next-auth';
+import type { NextAuthOptions, Session } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/src/lib/prisma';
+import { getServerEnv } from '@/src/lib/env';
 
-const prisma = new PrismaClient();
+const env = getServerEnv();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     }),
   ],
   session: {
-    strategy: 'jwt' as const,
+    strategy: 'jwt',
   },
+  secret: env.NEXTAUTH_SECRET,
   callbacks: {
-    async session({ session, token }: any) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
       return session;
     },
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
       }
@@ -34,5 +37,3 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
 };
-
-export default NextAuth(authOptions);

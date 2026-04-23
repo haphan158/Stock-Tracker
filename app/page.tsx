@@ -7,9 +7,15 @@ import { Input } from '@/src/components/ui/input';
 import { Button } from '@/src/components/ui/button';
 import { Search, TrendingUp, TrendingDown, DollarSign, BarChart3, RefreshCw } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { formatCurrency, formatPercentage } from '@/src/lib/utils';
 import { useStocks, useStockSearch, useMarketSummary, useRefreshStocks } from '@/src/hooks/useStocks';
+import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
+import {
+  useWatchlist,
+  useAddToWatchlist,
+  useRemoveFromWatchlist,
+} from '@/src/hooks/useWatchlist';
 import { StockData } from '@/src/lib/stock-service';
 
 // Default stocks to display
@@ -18,28 +24,36 @@ const defaultStocks = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'NVDA'];
 export default function Dashboard() {
   const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
-  const [displayedStocks, setDisplayedStocks] = useState(defaultStocks);
+  const debouncedSearch = useDebouncedValue(searchTerm.trim(), 350);
+  const [displayedStocks, setDisplayedStocks] = useState<string[]>(defaultStocks);
 
-  // Fetch stock data
-  const { data: stocks = [], isLoading: stocksLoading, error: stocksError } = useStocks(displayedStocks);
-  
-  // Search functionality
-  const { data: searchResults = [], isLoading: searchLoading } = useStockSearch(searchTerm);
-  
-  // Market summary
+  const { data: searchResults = [], isLoading: searchLoading } = useStockSearch(debouncedSearch);
+
+  useEffect(() => {
+    if (!debouncedSearch) {
+      setDisplayedStocks(defaultStocks);
+      return;
+    }
+    if (!searchLoading) {
+      setDisplayedStocks(
+        searchResults.length > 0 ? searchResults.map((stock) => stock.symbol) : [],
+      );
+    }
+  }, [debouncedSearch, searchResults, searchLoading]);
+
+  const stableSymbols = useMemo(() => [...displayedStocks].sort(), [displayedStocks]);
+  const { data: stocks = [], isLoading: stocksLoading, error: stocksError } = useStocks(stableSymbols);
   const { data: marketSummary, isLoading: marketSummaryLoading } = useMarketSummary();
-  
-  // Refresh functionality
   const refreshStocks = useRefreshStocks();
 
-  // Handle search
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setDisplayedStocks(defaultStocks);
-    } else if (searchResults.length > 0) {
-      setDisplayedStocks(searchResults.map(stock => stock.symbol));
-    }
-  }, [searchTerm, searchResults]);
+  const isAuthenticated = !!session?.user;
+  const { data: watchlist = [] } = useWatchlist(isAuthenticated);
+  const addWatchlist = useAddToWatchlist();
+  const removeWatchlist = useRemoveFromWatchlist();
+  const watchedSymbols = useMemo(
+    () => new Set(watchlist.map((item) => item.symbol)),
+    [watchlist],
+  );
 
   // Calculate market overview
   const totalMarketCap = stocks.reduce((sum, stock) => sum + (stock.marketCap || 0), 0);
@@ -48,7 +62,7 @@ export default function Dashboard() {
 
   // Handle refresh
   const handleRefresh = () => {
-    refreshStocks.mutate(displayedStocks);
+    refreshStocks.mutate(stableSymbols);
   };
 
   return (
@@ -153,14 +167,20 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Error Handling */}
-        {stocksError && (
+        {stocksError && stocks.length === 0 ? (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-800">
-              Error loading stock data. Please try refreshing or check your connection.
+              Couldn&apos;t load stock data right now. Try refreshing in a minute.
             </p>
           </div>
-        )}
+        ) : stocks.length === 0 && !stocksLoading && stableSymbols.length > 0 ? (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800">
+              Yahoo Finance is throttling requests from this network. Data will reappear
+              automatically once the rate-limit clears (usually 10–30 minutes).
+            </p>
+          </div>
+        ) : null}
 
         {/* Stock Grid */}
         {stocksLoading ? (
@@ -184,8 +204,13 @@ export default function Dashboard() {
               <StockCard
                 key={stock.symbol}
                 {...stock}
-                onAddToWatchlist={(symbol) => console.log(`Added ${symbol} to watchlist`)}
-                onRemoveFromWatchlist={(symbol) => console.log(`Removed ${symbol} from watchlist`)}
+                isInWatchlist={watchedSymbols.has(stock.symbol)}
+                onAddToWatchlist={
+                  isAuthenticated ? (symbol) => addWatchlist.mutate(symbol) : undefined
+                }
+                onRemoveFromWatchlist={
+                  isAuthenticated ? (symbol) => removeWatchlist.mutate(symbol) : undefined
+                }
               />
             ))}
           </div>

@@ -34,8 +34,9 @@ export function useStocks(symbols: string[]) {
     queryKey: ['stocks', symbols],
     queryFn: () => fetchStocks(symbols),
     enabled: symbols.length > 0,
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 10000, // Consider data stale after 10 seconds
+    // Server-side cache already serves fresh data for 60s; don't hammer it.
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 }
 
@@ -43,8 +44,9 @@ export function useStockSearch(query: string) {
   return useQuery({
     queryKey: ['stockSearch', query],
     queryFn: () => searchStocks(query),
-    enabled: query.length > 0,
-    staleTime: 60000, // Keep search results for 1 minute
+    enabled: query.trim().length > 0,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
   });
 }
 
@@ -52,8 +54,8 @@ export function useMarketSummary() {
   return useQuery({
     queryKey: ['marketSummary'],
     queryFn: fetchMarketSummary,
-    refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchInterval: 2 * 60_000,
+    staleTime: 60_000,
   });
 }
 
@@ -62,8 +64,8 @@ export function useStockData(symbol: string) {
     queryKey: ['stock', symbol],
     queryFn: () => fetchStocks([symbol]).then(stocks => stocks[0]),
     enabled: !!symbol,
-    refetchInterval: 15000, // Refetch every 15 seconds
-    staleTime: 5000, // Consider data stale after 5 seconds
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 }
 
