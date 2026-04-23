@@ -1,8 +1,5 @@
-import {
-  fetchHistoryWithFallback,
-  fetchQuotesWithFallback,
-  searchSymbolsWithFallback,
-} from '@/src/lib/providers';
+import { getCachedHistory } from '@/src/lib/history-cache';
+import { fetchQuotesWithFallback, searchSymbolsWithFallback } from '@/src/lib/providers';
 
 export interface StockData {
   symbol: string;
@@ -66,8 +63,8 @@ export class StockService {
     return quotes.sort((a, b) => (ranking.get(a.symbol) ?? 99) - (ranking.get(b.symbol) ?? 99));
   }
 
-  /** Historical close prices, routed through the provider chain. */
+  /** Historical close prices, routed through the cached provider chain. */
   static async getHistoricalData(symbol: string, days: number) {
-    return fetchHistoryWithFallback(symbol, days);
+    return getCachedHistory(symbol, days);
   }
 }

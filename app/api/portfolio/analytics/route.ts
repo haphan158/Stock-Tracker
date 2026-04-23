@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { getCachedHistory } from '@/src/lib/history-cache';
 import { prisma } from '@/src/lib/prisma';
-import { fetchHistoryWithFallback } from '@/src/lib/providers';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
 import { getSectors } from '@/src/lib/sector-cache';
 
@@ -34,12 +34,8 @@ export async function GET(request: NextRequest) {
     getSectors(symbols),
     Promise.all(
       symbols.map(async (symbol) => {
-        try {
-          const points = await fetchHistoryWithFallback(symbol, days);
-          return { symbol, points };
-        } catch {
-          return { symbol, points: [] };
-        }
+        const points = await getCachedHistory(symbol, days);
+        return { symbol, points };
       }),
     ),
   ]);

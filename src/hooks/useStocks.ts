@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import type { MarketSummaryData } from '@/src/lib/market-summary';
 import { type StockData } from '@/src/lib/stock-service';
 
 // API functions
@@ -21,20 +22,36 @@ const searchStocks = async (query: string): Promise<StockData[]> => {
   return data.stocks;
 };
 
-const fetchMarketSummary = async () => {
+const fetchMarketSummary = async (): Promise<MarketSummaryData> => {
   const response = await fetch('/api/stocks/market-summary');
   if (!response.ok) {
     throw new Error('Failed to fetch market summary');
   }
-  return response.json();
+  return response.json() as Promise<MarketSummaryData>;
 };
 
+function sameOrderedSymbols(a: string[], b: string[]) {
+  return a.length === b.length && a.every((s, i) => s === b[i]);
+}
+
+export interface UseStocksOptions {
+  /** Seeded from the RSC so the first paint matches the server fetch. */
+  initialStocks?: StockData[] | undefined;
+  /** When `symbols` matches this list (same order), `initialStocks` is used. */
+  initialSymbolsKey?: string[] | undefined;
+}
+
 // Custom hooks
-export function useStocks(symbols: string[]) {
+export function useStocks(symbols: string[], options?: UseStocksOptions) {
+  const { initialStocks, initialSymbolsKey } = options ?? {};
+  const useInitial =
+    initialStocks && initialSymbolsKey && sameOrderedSymbols(symbols, initialSymbolsKey);
+
   return useQuery({
     queryKey: ['stocks', symbols],
     queryFn: () => fetchStocks(symbols),
     enabled: symbols.length > 0,
+    initialData: useInitial ? initialStocks : undefined,
     // Server-side cache already serves fresh data for 60s; don't hammer it.
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -51,10 +68,11 @@ export function useStockSearch(query: string) {
   });
 }
 
-export function useMarketSummary() {
+export function useMarketSummary(initialData?: MarketSummaryData) {
   return useQuery({
     queryKey: ['marketSummary'],
     queryFn: fetchMarketSummary,
+    initialData,
     refetchInterval: 2 * 60_000,
     staleTime: 60_000,
   });

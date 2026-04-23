@@ -1,5 +1,7 @@
+import { upstreamErrorLogFields } from '@/src/lib/log-upstream';
 import { logger } from '@/src/lib/logger';
 import { finnhubProvider } from '@/src/lib/providers/finnhub';
+import { twelveDataProvider } from '@/src/lib/providers/twelve-data';
 import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 import { yahooProvider } from '@/src/lib/providers/yahoo';
 import type { StockData } from '@/src/lib/stock-service';
@@ -16,18 +18,33 @@ function recordError(name: string) {
 }
 
 /**
- * Ordered list of providers. The first one is the primary; later providers are
- * fallbacks used when the primary errors or returns no data for a symbol.
+ * Each capability has its own ordered provider chain. Yahoo is always the
+ * primary because it's free and broad; the fallbacks differ per capability:
  *
- * The primary is Yahoo (broadest coverage, no key needed). Finnhub is tried
- * next if FINNHUB_API_KEY is set.
+ *   - quotes:  Yahoo → Finnhub  (Finnhub's /quote still works on free tier)
+ *   - search:  Yahoo → Finnhub  (Finnhub's /search still works on free tier)
+ *   - history: Yahoo → Twelve Data  (Finnhub removed /stock/candle from free)
  */
-function chain(): QuoteProvider[] {
-  return [yahooProvider, finnhubProvider].filter((p) => p.isEnabled());
+function quoteChain(): QuoteProvider[] {
+  return [yahooProvider, finnhubProvider].filter(
+    (p) => p.isEnabled() && typeof p.getQuotes === 'function',
+  );
+}
+
+function historyChain(): QuoteProvider[] {
+  return [yahooProvider, twelveDataProvider].filter(
+    (p) => p.isEnabled() && typeof p.getHistory === 'function',
+  );
+}
+
+function searchChain(): QuoteProvider[] {
+  return [yahooProvider, finnhubProvider].filter(
+    (p) => p.isEnabled() && typeof p.searchSymbols === 'function',
+  );
 }
 
 export async function fetchQuotesWithFallback(symbols: string[]): Promise<StockData[]> {
-  const providers = chain();
+  const providers = quoteChain();
   if (providers.length === 0) return [];
 
   const merged = new Map<string, StockData>();
@@ -37,15 +54,18 @@ export async function fetchQuotesWithFallback(symbols: string[]): Promise<StockD
   for (const provider of providers) {
     if (remaining.length === 0) break;
     try {
-      const stocks = await provider.getQuotes(remaining);
+      const stocks = await provider.getQuotes!(remaining);
       for (const stock of stocks) merged.set(stock.symbol, stock);
       remaining = remaining.filter((sym) => !merged.has(sym));
     } catch (error) {
       lastError = error;
       recordError(provider.name);
+      const fields = upstreamErrorLogFields(error);
       logger.warn(
-        { err: error, provider: provider.name, remainingSymbols: remaining.length },
-        `[providers] ${provider.name} quotes failed; trying fallback`,
+        { provider: provider.name, remainingSymbols: remaining.length, ...fields },
+        fields.rateLimited
+          ? `[providers] ${provider.name} rate-limited; trying fallback`
+          : `[providers] ${provider.name} quotes failed; trying fallback`,
       );
     }
   }
@@ -61,7 +81,7 @@ export async function fetchHistoryWithFallback(
   symbol: string,
   days: number,
 ): Promise<HistoricalPoint[]> {
-  const providers = chain().filter((p) => typeof p.getHistory === 'function');
+  const providers = historyChain();
   let lastError: unknown;
   for (const provider of providers) {
     try {
@@ -70,9 +90,12 @@ export async function fetchHistoryWithFallback(
     } catch (error) {
       lastError = error;
       recordError(provider.name);
+      const fields = upstreamErrorLogFields(error);
       logger.warn(
-        { err: error, provider: provider.name, symbol },
-        `[providers] ${provider.name} history failed`,
+        { provider: provider.name, symbol, ...fields },
+        fields.rateLimited
+          ? `[providers] ${provider.name} history rate-limited`
+          : `[providers] ${provider.name} history failed`,
       );
     }
   }
@@ -89,16 +112,19 @@ export async function searchSymbolsWithFallback(query: string): Promise<SymbolMa
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const providers = chain().filter((p) => typeof p.searchSymbols === 'function');
+  const providers = searchChain();
   for (const provider of providers) {
     try {
       const matches = await provider.searchSymbols!(trimmed);
       if (matches.length > 0) return matches;
     } catch (error) {
       recordError(provider.name);
+      const fields = upstreamErrorLogFields(error);
       logger.warn(
-        { err: error, provider: provider.name, query: trimmed },
-        `[providers] ${provider.name} search failed`,
+        { provider: provider.name, query: trimmed, ...fields },
+        fields.rateLimited
+          ? `[providers] ${provider.name} search rate-limited`
+          : `[providers] ${provider.name} search failed`,
       );
     }
   }
@@ -106,7 +132,7 @@ export async function searchSymbolsWithFallback(query: string): Promise<SymbolMa
 }
 
 export function getEnabledProviderNames(): string[] {
-  return chain().map((p) => p.name);
+  return quoteChain().map((p) => p.name);
 }
 
 export interface ProviderStatus {
@@ -117,12 +143,12 @@ export interface ProviderStatus {
 
 /**
  * Snapshot of each provider's current health. `enabled` reflects whether the
- * provider is configured (e.g. Finnhub needs an API key); `lastErrorAt` is
- * the ISO timestamp of the most recent upstream failure recorded by this
- * process, or null if none.
+ * provider is configured (e.g. Finnhub and Twelve Data need API keys);
+ * `lastErrorAt` is the ISO timestamp of the most recent upstream failure
+ * recorded by this process, or null if none.
  */
 export function getProviderStatus(): ProviderStatus[] {
-  return [yahooProvider, finnhubProvider].map((p) => ({
+  return [yahooProvider, finnhubProvider, twelveDataProvider].map((p) => ({
     name: p.name,
     enabled: p.isEnabled(),
     lastErrorAt: lastErrorAt.get(p.name)?.toISOString() ?? null,

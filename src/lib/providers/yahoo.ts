@@ -1,9 +1,6 @@
-import yahooFinance from 'yahoo-finance2';
-
 import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 import type { StockData } from '@/src/lib/stock-service';
-
-yahooFinance.suppressNotices(['yahooSurvey']);
+import yahooFinance from '@/src/lib/yahoo-finance-instance';
 
 type YahooQuote = Awaited<ReturnType<typeof yahooFinance.quote>>;
 
@@ -88,14 +85,20 @@ export const yahooProvider: QuoteProvider = {
     return matches;
   },
   async getHistory(symbol, days) {
+    // `historical()` is deprecated by yahoo-finance2; it transparently maps to
+    // `chart()` internally, which we now call directly to silence the notice
+    // and keep the shape of our integration explicit.
     const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const history = await yahooFinance.historical(symbol, {
+    const result = await yahooFinance.chart(symbol, {
       period1,
       period2: new Date(),
       interval: '1d',
     });
-    return history
-      .filter((row): row is typeof row & { close: number } => typeof row.close === 'number')
+    const quotes = result?.quotes ?? [];
+    return quotes
+      .filter((row): row is typeof row & { close: number; date: Date } => {
+        return typeof row.close === 'number' && row.date instanceof Date;
+      })
       .map<HistoricalPoint>((row) => ({ date: row.date, close: row.close }));
   },
 };

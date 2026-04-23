@@ -6,7 +6,7 @@ import type { StockData } from '@/src/lib/stock-service';
 
 type ProvidersModule = typeof ProvidersIndex;
 
-const { yahoo, finnhub } = vi.hoisted(() => {
+const { yahoo, finnhub, twelveData } = vi.hoisted(() => {
   const makeProvider = (name: string) =>
     ({
       name,
@@ -20,11 +20,16 @@ const { yahoo, finnhub } = vi.hoisted(() => {
       searchSymbols: ReturnType<typeof vi.fn>;
       getHistory: ReturnType<typeof vi.fn>;
     };
-  return { yahoo: makeProvider('yahoo'), finnhub: makeProvider('finnhub') };
+  return {
+    yahoo: makeProvider('yahoo'),
+    finnhub: makeProvider('finnhub'),
+    twelveData: makeProvider('twelve-data'),
+  };
 });
 
 vi.mock('@/src/lib/providers/yahoo', () => ({ yahooProvider: yahoo }));
 vi.mock('@/src/lib/providers/finnhub', () => ({ finnhubProvider: finnhub }));
+vi.mock('@/src/lib/providers/twelve-data', () => ({ twelveDataProvider: twelveData }));
 
 function quote(symbol: string, price = 100): StockData {
   return {
@@ -49,12 +54,15 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
   yahoo.isEnabled.mockReset().mockReturnValue(true);
   finnhub.isEnabled.mockReset().mockReturnValue(true);
+  twelveData.isEnabled.mockReset().mockReturnValue(true);
   yahoo.getQuotes.mockReset();
   finnhub.getQuotes.mockReset();
+  twelveData.getQuotes.mockReset();
   yahoo.searchSymbols.mockReset();
   finnhub.searchSymbols.mockReset();
   yahoo.getHistory.mockReset();
   finnhub.getHistory.mockReset();
+  twelveData.getHistory.mockReset();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
@@ -211,6 +219,69 @@ describe('searchSymbolsWithFallback', () => {
 
     await mod.searchSymbolsWithFallback('  apple  ');
     expect(yahoo.searchSymbols).toHaveBeenCalledWith('apple');
+  });
+});
+
+describe('fetchHistoryWithFallback', () => {
+  const point = { date: new Date('2026-01-01T00:00:00Z'), close: 150 };
+
+  it('returns Yahoo history when Yahoo has data (no Twelve Data call)', async () => {
+    yahoo.getHistory.mockResolvedValueOnce([point]);
+    const mod = await load();
+
+    const result = await mod.fetchHistoryWithFallback('AAPL', 30);
+
+    expect(result).toEqual([point]);
+    expect(yahoo.getHistory).toHaveBeenCalledWith('AAPL', 30);
+    expect(twelveData.getHistory).not.toHaveBeenCalled();
+  });
+
+  it('falls through to Twelve Data when Yahoo returns empty', async () => {
+    yahoo.getHistory.mockResolvedValueOnce([]);
+    twelveData.getHistory.mockResolvedValueOnce([point]);
+    const mod = await load();
+
+    const result = await mod.fetchHistoryWithFallback('AAPL', 30);
+
+    expect(result).toEqual([point]);
+    expect(twelveData.getHistory).toHaveBeenCalledWith('AAPL', 30);
+  });
+
+  it('falls through to Twelve Data when Yahoo throws', async () => {
+    yahoo.getHistory.mockRejectedValueOnce(new Error('yahoo 429'));
+    twelveData.getHistory.mockResolvedValueOnce([point]);
+    const mod = await load();
+
+    const result = await mod.fetchHistoryWithFallback('AAPL', 30);
+    expect(result).toEqual([point]);
+  });
+
+  it('does NOT call Finnhub for history (Finnhub removed from history chain)', async () => {
+    yahoo.getHistory.mockResolvedValueOnce([]);
+    twelveData.getHistory.mockResolvedValueOnce([]);
+    const mod = await load();
+
+    await mod.fetchHistoryWithFallback('AAPL', 30);
+    expect(finnhub.getHistory).not.toHaveBeenCalled();
+  });
+
+  it('propagates the last error when every history provider throws', async () => {
+    yahoo.getHistory.mockRejectedValueOnce(new Error('yahoo down'));
+    twelveData.getHistory.mockRejectedValueOnce(new Error('twelve-data down'));
+    const mod = await load();
+
+    await expect(mod.fetchHistoryWithFallback('AAPL', 30)).rejects.toThrow('twelve-data down');
+  });
+
+  it('returns [] when no history providers are enabled', async () => {
+    yahoo.isEnabled.mockReturnValue(false);
+    twelveData.isEnabled.mockReturnValue(false);
+    const mod = await load();
+
+    const result = await mod.fetchHistoryWithFallback('AAPL', 30);
+    expect(result).toEqual([]);
+    expect(yahoo.getHistory).not.toHaveBeenCalled();
+    expect(twelveData.getHistory).not.toHaveBeenCalled();
   });
 });
 

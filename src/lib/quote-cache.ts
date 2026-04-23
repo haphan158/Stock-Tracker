@@ -1,5 +1,5 @@
-import { logger } from '@/src/lib/logger';
 import { StockService, type StockData } from '@/src/lib/stock-service';
+import { createUpstreamCooldown } from '@/src/lib/upstream-cooldown';
 
 /**
  * Stale-while-error cache for Yahoo Finance quotes.
@@ -16,13 +16,14 @@ type CacheEntry = { data: StockData; fetchedAt: number };
 
 const FRESH_TTL_MS = 60_000; // 1 minute
 const STALE_TTL_MS = 30 * 60_000; // 30 minutes
-const INITIAL_COOLDOWN_MS = 5 * 60_000; // start backoff at 5 minutes
-const MAX_COOLDOWN_MS = 30 * 60_000; // cap at 30 minutes
 
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<Map<string, StockData>>>();
-let upstreamCooldownUntil = 0;
-let currentCooldownMs = INITIAL_COOLDOWN_MS;
+const cooldown = createUpstreamCooldown({
+  name: 'quote-cache',
+  initialCooldownMs: 5 * 60_000,
+  maxCooldownMs: 30 * 60_000,
+});
 
 function getEntry(symbol: string) {
   return cache.get(symbol);
@@ -40,17 +41,10 @@ async function fetchAndStore(symbols: string[]): Promise<Map<string, StockData>>
   try {
     const stocks = await StockService.getMultipleStocks(symbols);
     store(stocks, Date.now());
-    upstreamCooldownUntil = 0;
-    currentCooldownMs = INITIAL_COOLDOWN_MS;
+    cooldown.recordSuccess();
     return new Map(stocks.map((s) => [s.symbol, s]));
   } catch (error) {
-    upstreamCooldownUntil = Date.now() + currentCooldownMs;
-    const cooledForSec = Math.round(currentCooldownMs / 1000);
-    currentCooldownMs = Math.min(currentCooldownMs * 2, MAX_COOLDOWN_MS);
-    logger.warn(
-      { err: error, symbols, cooledForSec },
-      `[quote-cache] Upstream fetch failed; cooling down ${cooledForSec}s`,
-    );
+    cooldown.recordFailure(error, { symbols });
     return new Map();
   }
 }
@@ -92,9 +86,7 @@ export async function getCachedQuotes(rawSymbols: string[]): Promise<StockData[]
   }
 
   if (needsFetch.length > 0) {
-    const inCooldown = now < upstreamCooldownUntil;
-
-    if (inCooldown) {
+    if (cooldown.isCoolingDown()) {
       // Serve stale entries where we can; skip Yahoo entirely.
       for (const symbol of needsFetch) {
         const entry = getEntry(symbol);
@@ -129,5 +121,5 @@ export async function getCachedQuote(symbol: string): Promise<StockData | null> 
 }
 
 export function isUpstreamCoolingDown(): boolean {
-  return Date.now() < upstreamCooldownUntil;
+  return cooldown.isCoolingDown();
 }

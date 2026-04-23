@@ -42,11 +42,38 @@ export function useWatchlist(enabled = true) {
   });
 }
 
+type WatchlistContext = { previous: WatchlistEntry[] | undefined };
+
 export function useAddToWatchlist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: addWatchlist,
-    onSuccess: () => qc.invalidateQueries({ queryKey: WATCHLIST_KEY }),
+    onMutate: async (symbol): Promise<WatchlistContext> => {
+      await qc.cancelQueries({ queryKey: WATCHLIST_KEY });
+      const previous = qc.getQueryData<WatchlistEntry[]>(WATCHLIST_KEY);
+      qc.setQueryData<WatchlistEntry[]>(WATCHLIST_KEY, (old) => {
+        const list = old ?? [];
+        if (list.some((e) => e.symbol === symbol)) return list;
+        return [
+          ...list,
+          {
+            id: `optimistic-${symbol}`,
+            symbol,
+            createdAt: new Date().toISOString(),
+            quote: null,
+          },
+        ];
+      });
+      return { previous };
+    },
+    onError: (_err, _symbol, context) => {
+      if (context?.previous) {
+        qc.setQueryData(WATCHLIST_KEY, context.previous);
+      }
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: WATCHLIST_KEY });
+    },
     meta: {
       successMessage: 'Added to watchlist',
       errorMessage: 'Could not add to watchlist',
@@ -58,7 +85,22 @@ export function useRemoveFromWatchlist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: removeWatchlist,
-    onSuccess: () => qc.invalidateQueries({ queryKey: WATCHLIST_KEY }),
+    onMutate: async (symbol): Promise<WatchlistContext> => {
+      await qc.cancelQueries({ queryKey: WATCHLIST_KEY });
+      const previous = qc.getQueryData<WatchlistEntry[]>(WATCHLIST_KEY);
+      qc.setQueryData<WatchlistEntry[]>(WATCHLIST_KEY, (old) =>
+        (old ?? []).filter((e) => e.symbol !== symbol),
+      );
+      return { previous };
+    },
+    onError: (_err, _symbol, context) => {
+      if (context?.previous) {
+        qc.setQueryData(WATCHLIST_KEY, context.previous);
+      }
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: WATCHLIST_KEY });
+    },
     meta: {
       successMessage: 'Removed from watchlist',
       errorMessage: 'Could not remove from watchlist',

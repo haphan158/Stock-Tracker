@@ -18,8 +18,8 @@ export interface QuoteProvider {
   readonly name: string;
   /** True when the provider is configured and usable. */
   isEnabled(): boolean;
-  /** Batched quote fetch. Throws on failure. */
-  getQuotes(symbols: string[]): Promise<StockData[]>;
+  /** Optional batched quote fetch. Throws on failure. */
+  getQuotes?(symbols: string[]): Promise<StockData[]>;
   /** Optional symbol search. Used by the dashboard's search bar. */
   searchSymbols?(query: string): Promise<SymbolMatch[]>;
   /** Optional historical close prices. */
