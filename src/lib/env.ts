@@ -8,6 +8,10 @@ const serverEnvSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   FINNHUB_API_KEY: z.string().min(1).optional(),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+  SENTRY_DSN: z.string().url().optional(),
+  // Injected at build time (e.g. `GIT_SHA=$(git rev-parse --short HEAD) npm run build`).
+  GIT_SHA: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

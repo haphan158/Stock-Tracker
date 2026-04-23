@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { StockService } from '@/src/lib/stock-service';
 
 const querySchema = z.object({
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest) {
     const stocks = await StockService.searchStocks(parsed.data.q);
     return NextResponse.json({ stocks });
   } catch (error) {
-    console.error('Error searching stocks:', error);
+    loggerFromRequest(request).error(
+      { err: error, query: parsed.data.q },
+      'Failed to search stocks',
+    );
     return NextResponse.json({ error: 'Failed to search stocks' }, { status: 502 });
   }
 }

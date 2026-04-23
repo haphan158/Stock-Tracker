@@ -1,7 +1,19 @@
+import { logger } from '@/src/lib/logger';
 import { finnhubProvider } from '@/src/lib/providers/finnhub';
 import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 import { yahooProvider } from '@/src/lib/providers/yahoo';
 import type { StockData } from '@/src/lib/stock-service';
+
+/**
+ * Last time each provider errored, keyed by provider name. Exposed via
+ * getProviderStatus() so /api/health can surface which upstreams are
+ * currently healthy without a database round-trip.
+ */
+const lastErrorAt = new Map<string, Date>();
+
+function recordError(name: string) {
+  lastErrorAt.set(name, new Date());
+}
 
 /**
  * Ordered list of providers. The first one is the primary; later providers are
@@ -30,9 +42,10 @@ export async function fetchQuotesWithFallback(symbols: string[]): Promise<StockD
       remaining = remaining.filter((sym) => !merged.has(sym));
     } catch (error) {
       lastError = error;
-      console.warn(
-        `[providers] ${provider.name} failed (${remaining.length} symbols); trying fallback`,
-        error instanceof Error ? error.message : error,
+      recordError(provider.name);
+      logger.warn(
+        { err: error, provider: provider.name, remainingSymbols: remaining.length },
+        `[providers] ${provider.name} quotes failed; trying fallback`,
       );
     }
   }
@@ -56,9 +69,10 @@ export async function fetchHistoryWithFallback(
       if (history.length > 0) return history;
     } catch (error) {
       lastError = error;
-      console.warn(
-        `[providers] ${provider.name} history failed for ${symbol}`,
-        error instanceof Error ? error.message : error,
+      recordError(provider.name);
+      logger.warn(
+        { err: error, provider: provider.name, symbol },
+        `[providers] ${provider.name} history failed`,
       );
     }
   }
@@ -81,9 +95,10 @@ export async function searchSymbolsWithFallback(query: string): Promise<SymbolMa
       const matches = await provider.searchSymbols!(trimmed);
       if (matches.length > 0) return matches;
     } catch (error) {
-      console.warn(
-        `[providers] ${provider.name} search failed for "${trimmed}"`,
-        error instanceof Error ? error.message : error,
+      recordError(provider.name);
+      logger.warn(
+        { err: error, provider: provider.name, query: trimmed },
+        `[providers] ${provider.name} search failed`,
       );
     }
   }
@@ -92,4 +107,24 @@ export async function searchSymbolsWithFallback(query: string): Promise<SymbolMa
 
 export function getEnabledProviderNames(): string[] {
   return chain().map((p) => p.name);
+}
+
+export interface ProviderStatus {
+  name: string;
+  enabled: boolean;
+  lastErrorAt: string | null;
+}
+
+/**
+ * Snapshot of each provider's current health. `enabled` reflects whether the
+ * provider is configured (e.g. Finnhub needs an API key); `lastErrorAt` is
+ * the ISO timestamp of the most recent upstream failure recorded by this
+ * process, or null if none.
+ */
+export function getProviderStatus(): ProviderStatus[] {
+  return [yahooProvider, finnhubProvider].map((p) => ({
+    name: p.name,
+    enabled: p.isEnabled(),
+    lastErrorAt: lastErrorAt.get(p.name)?.toISOString() ?? null,
+  }));
 }

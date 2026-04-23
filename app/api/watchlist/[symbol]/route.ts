@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { prisma } from '@/src/lib/prisma';
 import { symbolSchema } from '@/src/lib/validators';
 
@@ -30,7 +31,10 @@ export async function DELETE(
     if ((error as { code?: string }).code === 'P2025') {
       return NextResponse.json({ ok: true });
     }
-    console.error('Error deleting watchlist item:', error);
+    loggerFromRequest(request).error(
+      { err: error, userId, symbol: parsed.data },
+      'Failed to delete watchlist item',
+    );
     return NextResponse.json({ error: 'Failed to remove from watchlist' }, { status: 500 });
   }
 }

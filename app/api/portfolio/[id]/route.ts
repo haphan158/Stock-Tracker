@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { prisma } from '@/src/lib/prisma';
 import { holdingPatchSchema } from '@/src/lib/validators';
 
@@ -45,7 +46,10 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     });
     return NextResponse.json({ holding });
   } catch (error) {
-    console.error('Error updating holding:', error);
+    loggerFromRequest(request).error(
+      { err: error, userId, holdingId: id },
+      'Failed to update holding',
+    );
     return NextResponse.json({ error: 'Failed to update holding' }, { status: 500 });
   }
 }
@@ -66,7 +70,10 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     await prisma.holding.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('Error deleting holding:', error);
+    loggerFromRequest(request).error(
+      { err: error, userId, holdingId: id },
+      'Failed to delete holding',
+    );
     return NextResponse.json({ error: 'Failed to delete holding' }, { status: 500 });
   }
 }

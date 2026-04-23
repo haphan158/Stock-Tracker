@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
 
 const SYMBOL_RE = /^[A-Z0-9.\-]{1,10}$/;
@@ -46,7 +47,10 @@ export async function GET(request: NextRequest) {
     const stocks = await getCachedQuotes(parsed.data.symbols);
     return NextResponse.json({ stocks });
   } catch (error) {
-    console.error('Error fetching stocks:', error);
+    loggerFromRequest(request).error(
+      { err: error, symbols: parsed.data.symbols },
+      'Failed to fetch stock quotes',
+    );
     return NextResponse.json({ error: 'Failed to fetch stock data' }, { status: 502 });
   }
 }

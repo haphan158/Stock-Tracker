@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { enrichHolding, summarizePortfolio } from '@/src/lib/portfolio';
 import { prisma } from '@/src/lib/prisma';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ holding }, { status: 201 });
   } catch (error) {
-    console.error('Error upserting holding:', error);
+    loggerFromRequest(request).error({ err: error, userId, symbol }, 'Failed to upsert holding');
     return NextResponse.json({ error: 'Failed to save holding' }, { status: 500 });
   }
 }

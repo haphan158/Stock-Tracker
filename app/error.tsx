@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { Button } from '@/src/components/ui/button';
+import { reportError } from '@/src/lib/sentry';
 
 export default function Error({
   error,
@@ -12,7 +13,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[app/error] boundary caught:', error);
+    reportError(error, { digest: error.digest, tags: { boundary: 'app/error' } });
   }, [error]);
 
   return (

@@ -1,3 +1,4 @@
+import { logger } from '@/src/lib/logger';
 import { StockService, type StockData } from '@/src/lib/stock-service';
 
 /**
@@ -46,9 +47,9 @@ async function fetchAndStore(symbols: string[]): Promise<Map<string, StockData>>
     upstreamCooldownUntil = Date.now() + currentCooldownMs;
     const cooledForSec = Math.round(currentCooldownMs / 1000);
     currentCooldownMs = Math.min(currentCooldownMs * 2, MAX_COOLDOWN_MS);
-    console.warn(
-      `[quote-cache] Upstream fetch failed for [${symbols.join(', ')}]; cooling down ${cooledForSec}s`,
-      error instanceof Error ? error.message : error,
+    logger.warn(
+      { err: error, symbols, cooledForSec },
+      `[quote-cache] Upstream fetch failed; cooling down ${cooledForSec}s`,
     );
     return new Map();
   }

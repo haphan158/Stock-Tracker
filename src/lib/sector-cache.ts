@@ -1,5 +1,7 @@
 import yahooFinance from 'yahoo-finance2';
 
+import { logger } from '@/src/lib/logger';
+
 const TTL_MS = 24 * 60 * 60 * 1000;
 
 interface SectorEntry {
@@ -18,10 +20,7 @@ async function fetchSector(symbol: string): Promise<string | null> {
     const sector = (summary.assetProfile as { sector?: string } | undefined)?.sector;
     return typeof sector === 'string' && sector.length > 0 ? sector : null;
   } catch (error) {
-    console.warn(
-      `[sector-cache] Failed for ${symbol}`,
-      error instanceof Error ? error.message : error,
-    );
+    logger.warn({ err: error, symbol }, `[sector-cache] lookup failed`);
     return null;
   }
 }

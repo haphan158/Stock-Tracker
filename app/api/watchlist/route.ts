@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { prisma } from '@/src/lib/prisma';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
 import { symbolSchema } from '@/src/lib/validators';
@@ -65,7 +66,10 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ item }, { status: 201 });
   } catch (error) {
-    console.error('Error adding watchlist item:', error);
+    loggerFromRequest(request).error(
+      { err: error, userId, symbol: parsed.data.symbol },
+      'Failed to add watchlist item',
+    );
     return NextResponse.json({ error: 'Failed to add to watchlist' }, { status: 500 });
   }
 }

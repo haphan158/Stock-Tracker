@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { guardRequest } from '@/src/lib/api-guard';
+import { loggerFromRequest } from '@/src/lib/logger';
 import { StockService } from '@/src/lib/stock-service';
 
 const querySchema = z.object({
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       resultsCount: stocks.length,
     });
   } catch (error) {
-    console.error('Error discovering stocks:', error);
+    loggerFromRequest(request).error({ err: error, query: q }, 'Failed to discover stocks');
     return NextResponse.json({ error: 'Failed to discover stocks' }, { status: 502 });
   }
 }
