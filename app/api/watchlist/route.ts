@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+
 import { z } from 'zod';
-import { prisma } from '@/src/lib/prisma';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { prisma } from '@/src/lib/prisma';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
 import { symbolSchema } from '@/src/lib/validators';
 

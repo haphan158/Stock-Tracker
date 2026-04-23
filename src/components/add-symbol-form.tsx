@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 
@@ -41,19 +42,19 @@ export function AddSymbolForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
       <Input
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder}
         disabled={disabled || submitting}
         aria-label="Stock symbol"
-        className="sm:w-56 uppercase"
+        className="uppercase sm:w-56"
       />
       <Button type="submit" disabled={disabled || submitting || value.trim().length === 0}>
         {submitting ? 'Saving…' : submitLabel}
       </Button>
-      {error ? <p className="text-sm text-destructive self-center">{error}</p> : null}
+      {error ? <p className="text-destructive self-center text-sm">{error}</p> : null}
     </form>
   );
 }

@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { prisma } from '@/src/lib/prisma';
+import { fetchHistoryWithFallback } from '@/src/lib/providers';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
 import { getSectors } from '@/src/lib/sector-cache';
-import { fetchHistoryWithFallback } from '@/src/lib/providers';
 
 const DEFAULT_DAYS = 90;
 const MAX_DAYS = 365 * 5;
@@ -16,9 +17,10 @@ export async function GET(request: NextRequest) {
   const userId = guard.userId!;
 
   const daysParam = Number(request.nextUrl.searchParams.get('days'));
-  const days = Number.isFinite(daysParam) && daysParam > 0
-    ? Math.min(Math.floor(daysParam), MAX_DAYS)
-    : DEFAULT_DAYS;
+  const days =
+    Number.isFinite(daysParam) && daysParam > 0
+      ? Math.min(Math.floor(daysParam), MAX_DAYS)
+      : DEFAULT_DAYS;
 
   const holdings = await prisma.holding.findMany({ where: { userId } });
   if (holdings.length === 0) {
@@ -64,14 +66,12 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.value - a.value);
 
   // ── Portfolio performance timeseries ─────────────────────────────────────
-  const sharesBySymbol = new Map<string, number>(
-    holdings.map((h) => [h.symbol, Number(h.shares)]),
-  );
+  const sharesBySymbol = new Map<string, number>(holdings.map((h) => [h.symbol, Number(h.shares)]));
 
   // Intersect the set of dates available across all symbols (drop days where any
   // symbol is missing to avoid phantom dips on partial data).
-  const dateSetsBySymbol = histories.map(({ points }) =>
-    new Set(points.map((p) => toIsoDate(p.date))),
+  const dateSetsBySymbol = histories.map(
+    ({ points }) => new Set(points.map((p) => toIsoDate(p.date))),
   );
   const commonDates = dateSetsBySymbol.reduce<Set<string>>((acc, set, idx) => {
     if (idx === 0) return new Set(set);

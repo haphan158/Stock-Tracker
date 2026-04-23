@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { StockData } from '@/src/lib/stock-service';
+
+import { type StockData } from '@/src/lib/stock-service';
 
 // API functions
 const fetchStocks = async (symbols: string[]): Promise<StockData[]> => {
@@ -62,7 +63,7 @@ export function useMarketSummary() {
 export function useStockData(symbol: string) {
   return useQuery({
     queryKey: ['stock', symbol],
-    queryFn: () => fetchStocks([symbol]).then(stocks => stocks[0]),
+    queryFn: () => fetchStocks([symbol]).then((stocks) => stocks[0]),
     enabled: !!symbol,
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -72,15 +73,15 @@ export function useStockData(symbol: string) {
 // Mutation for refreshing stock data
 export function useRefreshStocks() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (symbols: string[]) => fetchStocks(symbols),
     onSuccess: (data) => {
       // Update the stocks query cache
-      queryClient.setQueryData(['stocks', data.map(s => s.symbol)], data);
-      
+      queryClient.setQueryData(['stocks', data.map((s) => s.symbol)], data);
+
       // Update individual stock caches
-      data.forEach(stock => {
+      data.forEach((stock) => {
         queryClient.setQueryData(['stock', stock.symbol], stock);
       });
     },

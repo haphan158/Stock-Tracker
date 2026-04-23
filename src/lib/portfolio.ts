@@ -1,4 +1,5 @@
 import type { Holding } from '@prisma/client';
+
 import type { StockData } from '@/src/lib/stock-service';
 
 export interface EnrichedHolding {

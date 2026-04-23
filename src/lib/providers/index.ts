@@ -1,7 +1,7 @@
-import type { StockData } from '@/src/lib/stock-service';
+import { finnhubProvider } from '@/src/lib/providers/finnhub';
 import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
 import { yahooProvider } from '@/src/lib/providers/yahoo';
-import { finnhubProvider } from '@/src/lib/providers/finnhub';
+import type { StockData } from '@/src/lib/stock-service';
 
 /**
  * Ordered list of providers. The first one is the primary; later providers are

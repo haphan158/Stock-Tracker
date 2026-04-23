@@ -1,12 +1,15 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Button } from '@/src/components/ui/button';
-import { TrendingUp, ArrowLeft } from 'lucide-react';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { TrendingUp, ArrowLeft } from 'lucide-react';
+import { signIn, useSession } from 'next-auth/react';
+
+import { Button } from '@/src/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 
 export default function SignIn() {
   const { data: session, status } = useSession();
@@ -20,30 +23,30 @@ export default function SignIn() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <div className="border-primary mx-auto h-12 w-12 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground mt-4">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <Link
             href="/"
-            className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4 transition-colors"
+            className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center transition-colors"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Link>
-          <div className="flex items-center justify-center mb-4">
-            <TrendingUp className="h-12 w-12 text-primary" />
+          <div className="mb-4 flex items-center justify-center">
+            <TrendingUp className="text-primary h-12 w-12" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome to Stock Tracker</h1>
+          <h1 className="text-foreground text-3xl font-bold">Welcome to Stock Tracker</h1>
           <p className="text-muted-foreground mt-2">
             Sign in to track your favorite stocks and manage your portfolio
           </p>
@@ -57,9 +60,9 @@ export default function SignIn() {
             <Button
               onClick={() => signIn('google')}
               variant="outline"
-              className="w-full flex items-center justify-center space-x-2"
+              className="flex w-full items-center justify-center space-x-2"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -82,10 +85,10 @@ export default function SignIn() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
+                <span className="border-border w-full border-t" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
+                <span className="bg-card text-muted-foreground px-2">Or continue with</span>
               </div>
             </div>
 
@@ -98,15 +101,15 @@ export default function SignIn() {
               </Button>
             </div>
 
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-muted-foreground text-center text-xs">
               By signing in, you agree to our Terms of Service and Privacy Policy.
             </p>
           </CardContent>
         </Card>
 
         <div className="mt-8 grid grid-cols-1 gap-4">
-          <div className="text-center text-sm text-muted-foreground">
-            <div className="font-medium text-foreground mb-2">Why Stock Tracker?</div>
+          <div className="text-muted-foreground text-center text-sm">
+            <div className="text-foreground mb-2 font-medium">Why Stock Tracker?</div>
             <div className="space-y-1">
               <div>Real-time stock data and analytics</div>
               <div>Beautiful, responsive design</div>

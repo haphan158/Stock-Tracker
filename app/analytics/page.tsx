@@ -1,6 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+
+import { BarChart3, TrendingDown, TrendingUp } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import {
   Area,
   AreaChart,
@@ -16,11 +19,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useTheme } from 'next-themes';
+
 import { Navigation } from '@/src/components/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
-import { BarChart3, TrendingDown, TrendingUp } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { usePortfolio } from '@/src/hooks/usePortfolio';
 import { usePortfolioAnalytics } from '@/src/hooks/usePortfolioAnalytics';
 import { formatCurrency, formatPercentage } from '@/src/lib/utils';
@@ -106,23 +108,23 @@ export default function AnalyticsPage() {
     gainLossPerHolding.length > 1 ? gainLossPerHolding[gainLossPerHolding.length - 1] : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
+          <h1 className="text-foreground mb-2 text-3xl font-bold">Analytics</h1>
           <p className="text-muted-foreground">
             A snapshot of your portfolio performance, computed from your holdings.
           </p>
         </div>
 
         {error ? (
-          <div className="mb-6 p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive">
+          <div className="border-destructive/30 bg-destructive/10 text-destructive mb-6 rounded-lg border p-4">
             Failed to load analytics.
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Return</CardTitle>
@@ -142,18 +144,20 @@ export default function AnalyticsPage() {
               >
                 {formatPercentage(summary?.totalGainLossPercent ?? 0)}
               </div>
-              <p className="text-xs text-muted-foreground">Unrealized P/L across all holdings</p>
+              <p className="text-muted-foreground text-xs">Unrealized P/L across all holdings</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Holdings</CardTitle>
-              <BarChart3 className="h-4 w-4 text-primary" />
+              <BarChart3 className="text-primary h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{summary?.holdingsCount ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Distinct positions</p>
+              <div className="text-foreground text-2xl font-bold">
+                {summary?.holdingsCount ?? 0}
+              </div>
+              <p className="text-muted-foreground text-xs">Distinct positions</p>
             </CardContent>
           </Card>
 
@@ -166,7 +170,7 @@ export default function AnalyticsPage() {
               <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 {bestPerformer ? `${formatPercentage(bestPerformer.gainLossPercent)}` : '—'}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {bestPerformer ? bestPerformer.symbol : 'No holdings'}
               </p>
             </CardContent>
@@ -181,7 +185,7 @@ export default function AnalyticsPage() {
               <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">
                 {worstPerformer ? formatPercentage(worstPerformer.gainLossPercent) : '—'}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {worstPerformer ? worstPerformer.symbol : 'No holdings'}
               </p>
             </CardContent>
@@ -190,18 +194,20 @@ export default function AnalyticsPage() {
 
         {isLoading ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">Loading analytics…</CardContent>
+            <CardContent className="text-muted-foreground py-12 text-center">
+              Loading analytics…
+            </CardContent>
           </Card>
         ) : holdings.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
+            <CardContent className="text-muted-foreground py-12 text-center">
               Add holdings in the Portfolio page to see analytics.
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>Portfolio Value Over Time</CardTitle>
                 <div className="flex gap-1">
                   {TIME_RANGES.map((range) => (
@@ -219,15 +225,15 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="h-72">
                   {analytics.isLoading ? (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-muted-foreground flex h-full items-center justify-center">
                       Loading history…
                     </div>
                   ) : analytics.error ? (
-                    <div className="h-full flex items-center justify-center text-destructive">
+                    <div className="text-destructive flex h-full items-center justify-center">
                       Couldn&apos;t load history.
                     </div>
                   ) : (analytics.data?.performance.length ?? 0) === 0 ? (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-muted-foreground flex h-full items-center justify-center">
                       No historical data available for this range.
                     </div>
                   ) : (
@@ -251,7 +257,9 @@ export default function AnalyticsPage() {
                           tick={{ fontSize: 12, fill: axisColor }}
                           stroke={axisColor}
                           tickFormatter={(value: number) =>
-                            value >= 1000 ? `$${(value / 1000).toFixed(1)}k` : `$${value.toFixed(0)}`
+                            value >= 1000
+                              ? `$${(value / 1000).toFixed(1)}k`
+                              : `$${value.toFixed(0)}`
                           }
                           width={56}
                         />
@@ -274,7 +282,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Gain / Loss by Holding (%)</CardTitle>
@@ -354,11 +362,11 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="h-72">
                   {analytics.isLoading ? (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-muted-foreground flex h-full items-center justify-center">
                       Loading sectors…
                     </div>
                   ) : (analytics.data?.sectors.length ?? 0) === 0 ? (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                    <div className="text-muted-foreground flex h-full items-center justify-center">
                       Sector data unavailable.
                     </div>
                   ) : (
@@ -381,10 +389,7 @@ export default function AnalyticsPage() {
                         </Pie>
                         <Tooltip
                           contentStyle={tooltipStyle}
-                          formatter={(value: number, name: string) => [
-                            formatCurrency(value),
-                            name,
-                          ]}
+                          formatter={(value: number, name: string) => [formatCurrency(value), name]}
                         />
                         <Legend wrapperStyle={{ color: axisColor }} />
                       </PieChart>

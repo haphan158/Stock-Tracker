@@ -2,11 +2,7 @@ import { z } from 'zod';
 
 export const SYMBOL_RE = /^[A-Z0-9.\-]{1,10}$/;
 
-export const symbolSchema = z
-  .string()
-  .trim()
-  .toUpperCase()
-  .regex(SYMBOL_RE, 'Invalid symbol');
+export const symbolSchema = z.string().trim().toUpperCase().regex(SYMBOL_RE, 'Invalid symbol');
 
 export const holdingInputSchema = z.object({
   symbol: symbolSchema,

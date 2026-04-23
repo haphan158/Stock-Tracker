@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+
 import { z } from 'zod';
-import { StockService } from '@/src/lib/stock-service';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { StockService } from '@/src/lib/stock-service';
 
 const querySchema = z.object({
   q: z.string().trim().min(1, 'q is required').max(64, 'q too long'),

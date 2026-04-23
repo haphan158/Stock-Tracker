@@ -1,7 +1,8 @@
 'use client';
 
+import { type ReactNode, useState } from 'react';
+
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactNode, useState } from 'react';
 import { toast } from 'sonner';
 
 interface QueryProviderProps {

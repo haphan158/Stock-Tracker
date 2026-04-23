@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { enrichHolding, summarizePortfolio } from '@/src/lib/portfolio';
+import { prisma } from '@/src/lib/prisma';
 import { getCachedQuotes } from '@/src/lib/quote-cache';
 import { holdingInputSchema } from '@/src/lib/validators';
-import { enrichHolding, summarizePortfolio } from '@/src/lib/portfolio';
 
 export async function GET(request: NextRequest) {
   const guard = await guardRequest(request, {

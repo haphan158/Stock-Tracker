@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { prisma } from '@/src/lib/prisma';
 import { getEnabledProviderNames } from '@/src/lib/providers';
 

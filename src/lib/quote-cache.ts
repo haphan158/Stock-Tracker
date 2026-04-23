@@ -73,7 +73,9 @@ function coalesce(symbols: string[]): Promise<Map<string, StockData>> {
  */
 export async function getCachedQuotes(rawSymbols: string[]): Promise<StockData[]> {
   const now = Date.now();
-  const symbols = Array.from(new Set(rawSymbols.map((s) => s.trim().toUpperCase()))).filter(Boolean);
+  const symbols = Array.from(new Set(rawSymbols.map((s) => s.trim().toUpperCase()))).filter(
+    Boolean,
+  );
   if (symbols.length === 0) return [];
 
   const result = new Map<string, StockData>();

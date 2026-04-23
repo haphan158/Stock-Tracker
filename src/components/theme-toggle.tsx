@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTheme } from 'next-themes';
+
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { Button } from '@/src/components/ui/button';
+import { useTheme } from 'next-themes';
+
 import { cn } from '@/lib/utils';
+import { Button } from '@/src/components/ui/button';
 
 const OPTIONS = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -38,11 +40,7 @@ export function ThemeToggle() {
     };
   }, [open]);
 
-  const ActiveIcon = mounted
-    ? resolvedTheme === 'dark'
-      ? Moon
-      : Sun
-    : Sun;
+  const ActiveIcon = mounted ? (resolvedTheme === 'dark' ? Moon : Sun) : Sun;
 
   return (
     <div ref={menuRef} className="relative">
@@ -60,7 +58,7 @@ export function ThemeToggle() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-36 rounded-md border border-border bg-popover text-popover-foreground shadow-md z-50 overflow-hidden"
+          className="border-border bg-popover text-popover-foreground absolute right-0 z-50 mt-2 w-36 overflow-hidden rounded-md border shadow-md"
         >
           {OPTIONS.map(({ value, label, icon: Icon }) => {
             const isActive = theme === value;
@@ -75,7 +73,7 @@ export function ThemeToggle() {
                   setOpen(false);
                 }}
                 className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2 text-sm text-left transition-colors',
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
                   'hover:bg-accent hover:text-accent-foreground',
                   isActive && 'bg-accent text-accent-foreground',
                 )}

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { prisma } from '@/src/lib/prisma';
 import { symbolSchema } from '@/src/lib/validators';
 
 export async function DELETE(

@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+
 import { z } from 'zod';
-import { getCachedQuotes } from '@/src/lib/quote-cache';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { getCachedQuotes } from '@/src/lib/quote-cache';
 
 const SYMBOL_RE = /^[A-Z0-9.\-]{1,10}$/;
 

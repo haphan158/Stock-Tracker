@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import type { StockData } from '@/src/lib/stock-service';
 
 export interface WatchlistEntry {

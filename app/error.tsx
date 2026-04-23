@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { Button } from '@/src/components/ui/button';
 
 export default function Error({
@@ -15,19 +16,19 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="max-w-md w-full bg-card border border-border rounded-lg p-6 shadow-sm text-center">
-        <h1 className="text-xl font-semibold text-foreground mb-2">Something went wrong</h1>
-        <p className="text-sm text-muted-foreground mb-4">
-          An unexpected error happened while loading this page. You can try again, or head back
-          to the dashboard.
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
+      <div className="bg-card border-border w-full max-w-md rounded-lg border p-6 text-center shadow-sm">
+        <h1 className="text-foreground mb-2 text-xl font-semibold">Something went wrong</h1>
+        <p className="text-muted-foreground mb-4 text-sm">
+          An unexpected error happened while loading this page. You can try again, or head back to
+          the dashboard.
         </p>
         {process.env.NODE_ENV !== 'production' && error?.message ? (
-          <pre className="text-left text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded p-3 mb-4 overflow-auto">
+          <pre className="text-destructive bg-destructive/10 border-destructive/20 mb-4 overflow-auto rounded border p-3 text-left text-xs">
             {error.message}
           </pre>
         ) : null}
-        <div className="flex gap-2 justify-center">
+        <div className="flex justify-center gap-2">
           <Button onClick={() => reset()}>Try again</Button>
           <Button variant="outline" onClick={() => (window.location.href = '/')}>
             Go home

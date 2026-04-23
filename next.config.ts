@@ -5,9 +5,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
-    ],
+    remotePatterns: [{ protocol: 'https', hostname: 'lh3.googleusercontent.com' }],
   },
 };
 

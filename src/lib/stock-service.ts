@@ -10,14 +10,14 @@ export interface StockData {
   currentPrice: number;
   change: number;
   changePercent: number;
-  marketCap?: number;
-  volume?: number;
-  previousClose?: number;
-  open?: number;
-  dayRange?: { low: number; high: number };
-  yearRange?: { low: number; high: number };
-  peRatio?: number;
-  dividendYield?: number;
+  marketCap?: number | undefined;
+  volume?: number | undefined;
+  previousClose?: number | undefined;
+  open?: number | undefined;
+  dayRange?: { low: number; high: number } | undefined;
+  yearRange?: { low: number; high: number } | undefined;
+  peRatio?: number | undefined;
+  dividendYield?: number | undefined;
   lastUpdated: Date;
 }
 
@@ -63,28 +63,7 @@ export class StockService {
     // Preserve the order returned by the symbol-search provider so "best
     // match" stays on top even after the quote fan-out reorders things.
     const ranking = new Map(symbols.map((s, i) => [s, i]));
-    return quotes.sort(
-      (a, b) => (ranking.get(a.symbol) ?? 99) - (ranking.get(b.symbol) ?? 99),
-    );
-  }
-
-  /** Company-name-prioritized search. */
-  static async searchStocksByName(query: string): Promise<StockData[]> {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return [];
-
-    const stocks = await this.searchStocks(query);
-    return [...stocks]
-      .sort((a, b) => {
-        const aNameMatch = a.name.toLowerCase().includes(normalizedQuery) ? 1 : 0;
-        const bNameMatch = b.name.toLowerCase().includes(normalizedQuery) ? 1 : 0;
-        if (aNameMatch !== bNameMatch) return bNameMatch - aNameMatch;
-
-        const aSymbolMatch = a.symbol.toLowerCase().includes(normalizedQuery) ? 1 : 0;
-        const bSymbolMatch = b.symbol.toLowerCase().includes(normalizedQuery) ? 1 : 0;
-        return bSymbolMatch - aSymbolMatch;
-      })
-      .slice(0, 15);
+    return quotes.sort((a, b) => (ranking.get(a.symbol) ?? 99) - (ranking.get(b.symbol) ?? 99));
   }
 
   /** Historical close prices, routed through the provider chain. */

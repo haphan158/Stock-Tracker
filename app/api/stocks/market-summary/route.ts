@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getCachedQuotes } from '@/src/lib/quote-cache';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { getCachedQuotes } from '@/src/lib/quote-cache';
 
 const POPULAR_SYMBOLS = [
   'AAPL',
@@ -43,9 +44,7 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => a.changePercent - b.changePercent)
     .slice(0, 5);
 
-  const mostActive = [...stocks]
-    .sort((a, b) => (b.volume || 0) - (a.volume || 0))
-    .slice(0, 5);
+  const mostActive = [...stocks].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 5);
 
   return NextResponse.json({ gainers, losers, mostActive });
 }

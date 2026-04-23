@@ -1,22 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import { Button } from '@/src/components/ui/button';
-import {
-  TrendingUp,
-  Briefcase,
-  Eye,
-  BarChart3,
-  LogOut,
-  Menu,
-  X,
-} from 'lucide-react';
+
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
-import { ThemeToggle } from '@/src/components/theme-toggle';
+
+import { TrendingUp, Briefcase, Eye, BarChart3, LogOut, Menu, X } from 'lucide-react';
+import { useSession, signIn, signOut } from 'next-auth/react';
+
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/src/components/theme-toggle';
+import { Button } from '@/src/components/ui/button';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: TrendingUp },
@@ -64,17 +59,17 @@ export function Navigation() {
   return (
     <nav
       aria-label="Primary"
-      className="sticky top-0 z-40 bg-card/80 backdrop-blur border-b border-border"
+      className="bg-card/80 border-border sticky top-0 z-40 border-b backdrop-blur"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           <div className="flex items-center space-x-8">
             <Link href="/" className="flex items-center space-x-2">
-              <TrendingUp className="h-7 w-7 text-primary" />
-              <span className="text-lg font-semibold text-foreground">Stock Tracker</span>
+              <TrendingUp className="text-primary h-7 w-7" />
+              <span className="text-foreground text-lg font-semibold">Stock Tracker</span>
             </Link>
 
-            <div className="hidden md:flex space-x-1">
+            <div className="hidden space-x-1 md:flex">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -98,20 +93,20 @@ export function Navigation() {
           <div className="flex items-center space-x-2 sm:space-x-3">
             <ThemeToggle />
 
-            <div className="hidden md:flex items-center space-x-3">
+            <div className="hidden items-center space-x-3 md:flex">
               {session ? (
                 <div className="flex items-center space-x-3">
-                  <div className="hidden sm:flex items-center space-x-2">
+                  <div className="hidden items-center space-x-2 sm:flex">
                     {session.user?.image && (
                       <Image
                         src={session.user.image}
                         alt={session.user.name || 'User'}
                         width={32}
                         height={32}
-                        className="h-8 w-8 rounded-full border border-border"
+                        className="border-border h-8 w-8 rounded-full border"
                       />
                     )}
-                    <span className="text-sm font-medium text-foreground">
+                    <span className="text-foreground text-sm font-medium">
                       {session.user?.name}
                     </span>
                   </div>
@@ -153,9 +148,9 @@ export function Navigation() {
         id="mobile-nav"
         ref={panelRef}
         hidden={!mobileOpen}
-        className="md:hidden border-t border-border bg-card"
+        className="border-border bg-card border-t md:hidden"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 space-y-1">
+        <div className="mx-auto max-w-7xl space-y-1 px-4 py-3 sm:px-6">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -177,7 +172,7 @@ export function Navigation() {
             );
           })}
 
-          <div className="pt-3 mt-2 border-t border-border">
+          <div className="border-border mt-2 border-t pt-3">
             {session ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 px-3">
@@ -187,15 +182,15 @@ export function Navigation() {
                       alt={session.user.name || 'User'}
                       width={32}
                       height={32}
-                      className="h-8 w-8 rounded-full border border-border"
+                      className="border-border h-8 w-8 rounded-full border"
                     />
                   )}
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">
+                    <div className="text-foreground truncate text-sm font-medium">
                       {session.user?.name}
                     </div>
                     {session.user?.email ? (
-                      <div className="text-xs text-muted-foreground truncate">
+                      <div className="text-muted-foreground truncate text-xs">
                         {session.user.email}
                       </div>
                     ) : null}
@@ -205,18 +200,14 @@ export function Navigation() {
                   variant="outline"
                   size="sm"
                   onClick={() => signOut()}
-                  className="w-full flex items-center justify-center gap-2"
+                  className="flex w-full items-center justify-center gap-2"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
                 </Button>
               </div>
             ) : (
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={() => signIn('google')}
-              >
+              <Button size="sm" className="w-full" onClick={() => signIn('google')}>
                 Sign In
               </Button>
             )}

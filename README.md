@@ -28,7 +28,7 @@ A modern, real-time stock tracking web application built with Next.js 15, React 
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL
 - Google Cloud Console account (for OAuth)
 - Docker & Docker Compose (optional)
@@ -67,9 +67,6 @@ NEXTAUTH_SECRET="your-generated-secret-key"
 # Google OAuth (Required for authentication)
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# Optional: Alpha Vantage API (alternative stock data)
-ALPHA_VANTAGE_API_KEY="your-api-key"
 
 # Optional: AWS (for production deployment)
 AWS_ACCESS_KEY_ID="your-aws-access-key"

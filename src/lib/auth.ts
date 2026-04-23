@@ -1,9 +1,10 @@
+import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import type { NextAuthOptions, Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from '@/src/lib/prisma';
+
 import { getServerEnv } from '@/src/lib/env';
+import { prisma } from '@/src/lib/prisma';
 
 const env = getServerEnv();
 

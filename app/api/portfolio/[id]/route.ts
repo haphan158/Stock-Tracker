@@ -1,12 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { prisma } from '@/src/lib/prisma';
 import { holdingPatchSchema } from '@/src/lib/validators';
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const guard = await guardRequest(request, {
     rateLimit: { limit: 30, windowMs: 60_000 },
   });
@@ -38,9 +36,12 @@ export async function PATCH(
     if (!existing || existing.userId !== userId) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
+    const updateData: { shares?: number; averageCost?: number } = {};
+    if (parsed.data.shares !== undefined) updateData.shares = parsed.data.shares;
+    if (parsed.data.averageCost !== undefined) updateData.averageCost = parsed.data.averageCost;
     const holding = await prisma.holding.update({
       where: { id },
-      data: parsed.data,
+      data: updateData,
     });
     return NextResponse.json({ holding });
   } catch (error) {
@@ -49,10 +50,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const guard = await guardRequest(request, {
     rateLimit: { limit: 60, windowMs: 60_000 },
   });

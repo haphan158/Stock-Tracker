@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
+
 import { z } from 'zod';
-import { StockService } from '@/src/lib/stock-service';
+
 import { guardRequest } from '@/src/lib/api-guard';
+import { StockService } from '@/src/lib/stock-service';
 
 const querySchema = z.object({
   q: z.string().trim().min(1, 'q is required').max(64, 'q too long'),
-  type: z.enum(['symbol', 'name', 'all']).default('symbol'),
 });
 
 export async function GET(request: NextRequest) {
@@ -17,7 +18,6 @@ export async function GET(request: NextRequest) {
 
   const parsed = querySchema.safeParse({
     q: request.nextUrl.searchParams.get('q') ?? '',
-    type: request.nextUrl.searchParams.get('type') ?? undefined,
   });
   if (!parsed.success) {
     return NextResponse.json(
@@ -26,17 +26,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { q, type } = parsed.data;
+  const { q } = parsed.data;
 
   try {
-    const stocks =
-      type === 'name'
-        ? await StockService.searchStocksByName(q)
-        : await StockService.searchStocks(q);
+    const stocks = await StockService.searchStocks(q);
 
     return NextResponse.json({
       stocks,
-      searchType: type,
       query: q,
       resultsCount: stocks.length,
     });

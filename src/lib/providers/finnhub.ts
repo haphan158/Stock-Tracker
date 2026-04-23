@@ -1,5 +1,5 @@
-import type { StockData } from '@/src/lib/stock-service';
 import type { HistoricalPoint, QuoteProvider, SymbolMatch } from '@/src/lib/providers/types';
+import type { StockData } from '@/src/lib/stock-service';
 
 const BASE_URL = 'https://finnhub.io/api/v1';
 const PROFILE_TTL_MS = 24 * 60 * 60 * 1000; // Finnhub profiles rarely change.
@@ -114,9 +114,7 @@ export const finnhubProvider: QuoteProvider = {
         type?: string;
       }>;
     }
-    const data = await fetchJson<FinnhubSearchResult>(
-      `/search?q=${encodeURIComponent(trimmed)}`,
-    );
+    const data = await fetchJson<FinnhubSearchResult>(`/search?q=${encodeURIComponent(trimmed)}`);
     const matches: SymbolMatch[] = [];
     const seen = new Set<string>();
     for (const row of data.result ?? []) {

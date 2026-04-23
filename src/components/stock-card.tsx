@@ -1,10 +1,12 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Button } from '@/src/components/ui/button';
-import { TrendingUp, TrendingDown, Minus, Star } from 'lucide-react';
-import { formatCurrency, formatNumber, formatPercentage, getChangeColor } from '@/src/lib/utils';
 import { useState } from 'react';
+
+import { TrendingUp, TrendingDown, Minus, Star } from 'lucide-react';
+
+import { Button } from '@/src/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { formatCurrency, formatNumber, formatPercentage, getChangeColor } from '@/src/lib/utils';
 
 interface StockCardProps {
   symbol: string;
@@ -12,11 +14,11 @@ interface StockCardProps {
   currentPrice: number;
   change: number;
   changePercent: number;
-  marketCap?: number;
-  volume?: number;
-  isInWatchlist?: boolean;
-  onAddToWatchlist?: (symbol: string) => void;
-  onRemoveFromWatchlist?: (symbol: string) => void;
+  marketCap?: number | undefined;
+  volume?: number | undefined;
+  isInWatchlist?: boolean | undefined;
+  onAddToWatchlist?: ((symbol: string) => void) | undefined;
+  onRemoveFromWatchlist?: ((symbol: string) => void) | undefined;
 }
 
 export function StockCard({
@@ -49,34 +51,35 @@ export function StockCard({
   };
 
   const getChangeIcon = () => {
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
+    if (change > 0)
+      return <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
     if (change < 0) return <TrendingDown className="h-4 w-4 text-rose-600 dark:text-rose-400" />;
-    return <Minus className="h-4 w-4 text-muted-foreground" />;
+    return <Minus className="text-muted-foreground h-4 w-4" />;
   };
 
   return (
-    <Card className="hover:shadow-lg hover:border-primary/40 transition-all duration-200">
+    <Card className="hover:border-primary/40 transition-all duration-200 hover:shadow-lg">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg font-semibold text-foreground">
-              {symbol}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">{name}</p>
+            <CardTitle className="text-foreground text-lg font-semibold">{symbol}</CardTitle>
+            <p className="text-muted-foreground mt-1 text-sm">{name}</p>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleWatchlistToggle}
             disabled={isLoading}
-            className="p-2 h-auto"
-            aria-label={isInWatchlist ? `Remove ${symbol} from watchlist` : `Add ${symbol} to watchlist`}
+            className="h-auto p-2"
+            aria-label={
+              isInWatchlist ? `Remove ${symbol} from watchlist` : `Add ${symbol} to watchlist`
+            }
             aria-pressed={isInWatchlist}
           >
             {isInWatchlist ? (
-              <Star className="h-5 w-5 text-amber-500 fill-current" />
+              <Star className="h-5 w-5 fill-current text-amber-500" />
             ) : (
-              <Star className="h-5 w-5 text-muted-foreground" />
+              <Star className="text-muted-foreground h-5 w-5" />
             )}
           </Button>
         </div>
@@ -85,7 +88,7 @@ export function StockCard({
       <CardContent className="pt-0">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-foreground">
+            <span className="text-foreground text-2xl font-bold">
               {formatCurrency(currentPrice)}
             </span>
             <div className="flex items-center space-x-1">
@@ -100,23 +103,23 @@ export function StockCard({
             <span className={`text-sm font-medium ${getChangeColor(changePercent)}`}>
               {formatPercentage(changePercent)}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {change > 0 ? 'Gain' : change < 0 ? 'Loss' : 'No Change'}
             </span>
           </div>
 
           {(marketCap || volume) && (
-            <div className="pt-2 border-t border-border">
-              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+            <div className="border-border border-t pt-2">
+              <div className="text-muted-foreground grid grid-cols-2 gap-4 text-xs">
                 {marketCap ? (
                   <div>
-                    <span className="block font-medium text-foreground">Market Cap</span>
+                    <span className="text-foreground block font-medium">Market Cap</span>
                     <span>{formatNumber(marketCap)}</span>
                   </div>
                 ) : null}
                 {volume ? (
                   <div>
-                    <span className="block font-medium text-foreground">Volume</span>
+                    <span className="text-foreground block font-medium">Volume</span>
                     <span>{formatNumber(volume)}</span>
                   </div>
                 ) : null}
