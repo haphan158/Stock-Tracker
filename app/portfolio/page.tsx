@@ -5,7 +5,7 @@ import { Navigation } from '@/src/components/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, X } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, X, AlertTriangle } from 'lucide-react';
 import { formatCurrency, formatPercentage } from '@/src/lib/utils';
 import {
   useDeleteHolding,
@@ -195,6 +195,24 @@ export default function PortfolioPage() {
           </Card>
         </div>
 
+        {summary && summary.staleCount > 0 ? (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden />
+            <div>
+              <div className="font-medium">
+                Live prices unavailable for {summary.staleCount} holding
+                {summary.staleCount === 1 ? '' : 's'}.
+              </div>
+              <div className="text-xs opacity-80">
+                Yahoo Finance may be rate-limiting your IP. Those rows fall back
+                to your average cost so totals stay sane — they are not current
+                market prices. Add a <code className="font-mono">FINNHUB_API_KEY</code>{' '}
+                in <code className="font-mono">.env</code> for an automatic fallback.
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <Card>
           <CardHeader>
             <CardTitle>Your Holdings</CardTitle>
@@ -222,7 +240,18 @@ export default function PortfolioPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between sm:block">
                         <div className="min-w-0">
-                          <h3 className="font-semibold text-foreground">{holding.symbol}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-foreground">{holding.symbol}</h3>
+                            {!holding.quoteAvailable ? (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300"
+                                title="Live price unavailable — showing cost basis as a placeholder"
+                              >
+                                <AlertTriangle className="h-3 w-3" aria-hidden />
+                                no live price
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="text-sm text-muted-foreground truncate">{holding.name}</p>
                         </div>
                         <Button
@@ -239,25 +268,33 @@ export default function PortfolioPage() {
                       <div className="mt-2 text-sm text-muted-foreground">
                         {holding.shares.toLocaleString(undefined, { maximumFractionDigits: 6 })}{' '}
                         shares @ {formatCurrency(holding.averageCost)} avg ·{' '}
-                        <span className="text-foreground">
-                          now {formatCurrency(holding.currentPrice)}
-                        </span>
+                        {holding.quoteAvailable ? (
+                          <span className="text-foreground">
+                            now {formatCurrency(holding.currentPrice)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground italic">price unavailable</span>
+                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end gap-4">
                       <div className="text-right">
                         <div className="font-semibold text-foreground">
-                          {formatCurrency(holding.marketValue)}
+                          {holding.quoteAvailable ? formatCurrency(holding.marketValue) : '—'}
                         </div>
                         <div
                           className={`text-sm ${
-                            holding.gainLoss >= 0
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-rose-600 dark:text-rose-400'
+                            !holding.quoteAvailable
+                              ? 'text-muted-foreground'
+                              : holding.gainLoss >= 0
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-rose-600 dark:text-rose-400'
                           }`}
                         >
-                          {formatCurrency(holding.gainLoss)} ({formatPercentage(holding.gainLossPercent)})
+                          {holding.quoteAvailable
+                            ? `${formatCurrency(holding.gainLoss)} (${formatPercentage(holding.gainLossPercent)})`
+                            : '—'}
                         </div>
                       </div>
 

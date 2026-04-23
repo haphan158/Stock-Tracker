@@ -9,8 +9,18 @@ type YahooQuote = Awaited<ReturnType<typeof yahooFinance.quote>>;
 function toStockData(quote: Extract<YahooQuote, { symbol: string }>): StockData {
   const currentPrice = quote.regularMarketPrice ?? 0;
   const previousClose = quote.regularMarketPreviousClose ?? 0;
-  const change = currentPrice - previousClose;
-  const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+  // Prefer Yahoo's canonical change fields; they reconcile with yahoo.com and
+  // account for splits/dividends. Fall back to a manual diff only if missing.
+  const change =
+    typeof quote.regularMarketChange === 'number'
+      ? quote.regularMarketChange
+      : currentPrice - previousClose;
+  const changePercent =
+    typeof quote.regularMarketChangePercent === 'number'
+      ? quote.regularMarketChangePercent
+      : previousClose > 0
+        ? (change / previousClose) * 100
+        : 0;
 
   const dividendYield =
     typeof (quote as { dividendYield?: number }).dividendYield === 'number'
